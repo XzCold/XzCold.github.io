@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XzCold | 3D Scene Artist</title>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght300;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- 0. 核心配置 --- */
+        :root {
+            --bg-base: #000000;       /* 纯黑背景 */
+            --accent: #FF6B00;        /* 核心点缀色：橙色 */
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --font-title: 'Roboto Mono', 'Noto Sans SC', sans-serif;
+            --font-body: 'Noto Sans SC', sans-serif;
+        }
+
+        /* --- 1. 全局基础样式 --- */
+        body {
+            margin: 0;
+            background-color: var(--bg-base); 
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+            cursor: default; /* 默认指针 */
+        }
+
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; padding: 0; margin: 0; }
+
+        /* --- Canvas for Particle Effect (动态粒子画布) --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; 
+        }
+
+        /* --- 2. 导航栏 (大改动：中央胶囊菜单) --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* 导航栏整体靠上，预留空间 */
+            padding: 30px 60px 0 60px; 
+            position: fixed;
+            width: calc(100% - 120px);
+            top: 0;
+            z-index: 100;
+            /* 移除nav的背景，只留给menu容器 */
+            background: transparent; 
+        }
+        .logo {
+            font-family: var(--font-title);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--text-main); 
+        }
+        .logo span { color: var(--accent); }
+
+        /* 菜单容器 (胶囊形状，雾透效果) */
+        .menu-container {
+            display: flex;
+            background: rgba(10, 10, 10, 0.7); /* 深色半透明背景 */
+            backdrop-filter: blur(8px);       /* 雾透/毛玻璃效果 */
+            -webkit-backdrop-filter: blur(8px); /* 兼容 Safari */
+            border-radius: 40px; /* 胶囊圆角 */
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 107, 0, 0.2); /* 浅橙色边框 */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); 
+            /* 居中定位 */
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .menu a {
+            position: relative;
+            padding: 10px 20px; /* 增加点击区域和间距 */
+            margin: 0 5px;
+            font-size: 16px; /* 字体稍微放大 */
+            font-weight: 400;
+            color: var(--text-main); /* 默认白色 */
+            transition: color 0.3s;
+        }
+
+        /* 悬停/下划线动画 */
+        .menu a::after {
+            content: '';
+            position: absolute;
+            bottom: 5px; /* 下划线位置 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; /* 默认宽度为0 */
+            height: 2px;
+            background-color: var(--accent);
+            transition: width 0.3s ease-out;
+        }
+
+        .menu a:hover { 
+            color: var(--accent); /* 悬停文字变橙色 */
+        }
+        
+        .menu a:hover::after {
+            width: 70%; /* 悬停时下划线展开 */
+        }
+        
+        /* 默认选中状态 (可用于当前页) */
+        .menu a.active {
+            color: var(--accent);
+        }
+        .menu a.active::after {
+            width: 70%; 
+        }
+
+        /* --- 3. Hero 区域 --- */
+        header {
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1; 
+        }
+        /* ... 其他样式不变 ... */
+        .hero-title {
+            font-family: var(--font-title);
+            font-size: 90px;
+            line-height: 1.1;
+            margin: 0;
+            text-transform: uppercase;
+            color: var(--text-main); 
+            text-shadow: 0 0 30px rgba(255,255,255,0.2); 
+        }
+        .hero-title .zh {
+            font-size: 60px;
+            font-family: var(--font-body);
+            display: block;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            letter-spacing: 10px;
+            color: var(--accent); 
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(255,107,0,0.8); 
+        }
+
+        .hero-desc {
+            max-width: 700px;
+            color: var(--text-sub);
+            margin-top: 40px;
+            font-size: 16px;
+            line-height: 1.8;
+            padding: 20px 0;
+        }
+
+        /* --- 4. 关于我 --- */
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 40px;
+            position: relative;
+            z-index: 1; 
+        }
+
+        .about-layout {
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            padding: 40px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05); /* 极浅透明白 */
+            border: 1px solid rgba(255, 107, 0, 0.1);
+            box-shadow: 0 0 10px rgba(255, 107, 0, 0.1);
+        }
+
+        .avatar-box {
+            position: relative;
+            flex-shrink: 0;
+            width: 280px;
+            height: 280px; 
+            overflow: hidden; 
+            border-radius: 50%; /* 圆形头像 */
+            border: 3px solid var(--accent); /* 橙色边框 */
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.5); /* 橙色发光 */
+        }
+        
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            filter: grayscale(100%) brightness(0.8) contrast(1.5); 
+            transition: 0.5s;
+            transform: scale(1.05);
+        }
+        .avatar-box:hover img {
+            filter: grayscale(0%) brightness(1) contrast(1); 
+            transform: scale(1);
+        }
+
+        .info-box h2 {
+            font-family: var(--font-title);
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+        .info-box h3 {
+             font-family: var(--font-body);
+             font-size: 24px;
+             color: var(--accent);
+             margin-top: 0;
+             margin-bottom: 20px;
+        }
+
+        .info-box p {
+            color: var(--text-sub);
+            line-height: 1.8;
+        }
+
+        .tags-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .tech-tag {
+            background: rgba(255, 107, 0, 0.1);
+            border: 1px solid var(--accent);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--accent);
+            font-family: var(--font-title);
+        }
+
+        /* --- 5. 作品集 --- */
+        .works-header {
+            margin-bottom: 50px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .works-header h2 {
+            margin: 0;
+            font-family: var(--font-title);
+            font-size: 48px;
+            text-transform: uppercase;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--accent);
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 占位卡片样式 */
+        .work-card.placeholder {
+            height: 200px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            background: rgba(255, 107, 0, 0.05); 
+            border: 1px dashed var(--accent);
+            color: var(--accent);
+            font-family: var(--font-title);
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .work-card.placeholder:hover {
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+            transform: translateY(-5px);
+        }
+        .placeholder-text {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+        .placeholder-icon {
+            font-size: 40px;
+        }
+
+
+        /* --- Footer --- */
+        footer {
+            padding: 100px 0 50px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        footer h2 {
+            font-family: var(--font-title);
+            font-size: 24px;
+            color: var(--accent);
+        }
+        footer p {
+            color: var(--text-sub);
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* 适配 */
+        @media (max-width: 768px) {
+            .hero-title { font-size: 60px; }
+            .hero-title .zh { font-size: 40px; }
+            .about-layout { flex-direction: column; text-align: center; padding: 20px; }
+            .tags-row { justify-content: center; }
+            nav { padding: 20px 20px 0 20px; width: calc(100% - 40px); justify-content: space-between; }
+            .menu-container { display: none; } /* 移动端隐藏胶囊菜单，只保留logo */
+            .section-container { padding: 50px 20px; }
+            .avatar-box { width: 180px; height: 180px; }
+            .info-box h2 { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <nav data-aos="fade-down">
+        <div class="logo">XZ<span style="color:var(--accent)">COLD</span></div>
+        
+        <div class="menu-container">
+            <div class="menu">
+                <a href="#home" class="active">首页</a> 
+                <a href="#about">关于</a>
+                <a href="#works">作品</a>
+                <a href="#contact">联系</a>
+            </div>
+        </div>
+
+        <div class="right-icon" style="color:var(--text-sub);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+    </nav>
+
+    <header id="home">
+        <div data-aos="zoom-out" data-aos-duration="1200">
+            <div class="hero-subtitle">3D SCENE ARTIST</div>
+            <h1 class="hero-title">
+                DIGITAL <br> REALM
+                <span class="zh">数字领域</span>
+            </h1>
+            <div class="hero-desc">
+                我专注于 Unreal Engine 5 与 Blender 的场景艺术创作。
+                用代码和光影构建沉浸式的视觉叙事，探索未来主义与赛博朋克的世界观。
+            </div>
+        </div>
+    </header>
+
+    <section class="section-container" id="about">
+        <div class="about-layout" data-aos="fade-up">
+            <div class="avatar-box">
+                <img src="profile.jpg" alt="XzCold Profile">
+            </div>
+            <div class="info-box">
+                <h2>ABOUT ME</h2>
+                <h3>探索视觉<span style="color:var(--accent)">前沿</span></h3>
+                <p>
+                    我的工作核心是精确的数字几何与氛围营造，追求技术与艺术的完美融合。我擅长大规模环境的资产管理和实时光照优化。
+                    我的目标是创造出引人入胜、具有深度的沉浸式体验。
+                </p>
+                <div class="tags-row">
+                    <div class="tech-tag">UE5 Real-time</div>
+                    <div class="tech-tag">Procedural Modeling</div>
+                    <div class="tech-tag">Blender</div>
+                    <div class="tech-tag">Houdini FX</div>
+                    <div class="tech-tag">PBR Texturing</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-container" id="works">
+        <div class="works-header" data-aos="fade-up">
+            <h2>WORKS GALLERY</h2>
+        </div>
+
+        <div class="bento-grid">
+            <div class="work-card placeholder" data-aos="fade-up" data-aos-delay="0">
+                <span class="placeholder-icon">⌬</span>
+                <div class="placeholder-text">PROJECT 01</div>
+                <div>敬请期待 / Coming Soon</div>
+            </div>
+
+            <div class="work-card placeholder" data-aos="fade-up" data-aos-delay="100">
+                <span class="placeholder-icon">⏣</span>
+                <div class="placeholder-text">PROJECT 02</div>
+                <div>点击插入图片 / Insert Image Here</div>
+            </div>
+
+            <div class="work-card placeholder" data-aos="fade-up" data-aos-delay="200">
+                <span class="placeholder-icon">⟡</span>
+                <div class="placeholder-text">PROJECT 03</div>
+                <div>动态粒子实验 / Particle Test</div>
+            </div>
+
+            <div class="work-card placeholder" data-aos="fade-up" data-aos-delay="300">
+                <span class="placeholder-icon">⌘</span>
+                <div class="placeholder-text">PROJECT 04</div>
+                <div>作品开发中 / In Development</div>
+            </div>
+             </div>
+    </section>
+
+    <footer id="contact">
+        <h2>CONTACT & CONNECT</h2>
+        <p>Email: your-email@example.com | WeChat: your-wechat-id</p>
+        <p>XzCold © 2025 | All Rights Reserved.</p>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            offset: 50,
+            duration: 1000,
+            once: true
+        });
+
+        // --- 鼠标粒子动效 JS 代码 (Antigravity 风格) ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let mouse = { x: null, y: null, radius: 100 }; // 鼠标影响范围：100px
+        const PARTICLE_COUNT = 150; // 粒子数量
+
+        // 初始化画布大小
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        initCanvas();
+        window.addEventListener('resize', initCanvas);
+
+        // 鼠标移动事件
+        window.addEventListener('mousemove', function(event) {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+        window.addEventListener('mouseleave', function() {
+            // 鼠标离开时，让粒子逐渐回到静止状态
+            mouse.x = undefined;
+            mouse.y = undefined;
+        });
+
+        // Particle 类
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = (Math.random() * 2) + 0.5; // 粒子大小 0.5 到 2.5
+                this.baseSize = this.size;
+                this.velocity = { x: (Math.random() * 0.4) - 0.2, y: (Math.random() * 0.4) - 0.2 }; // 慢速随机移动
+                this.color = `rgba(255, 107, 0, ${Math.random() * 0.8 + 0.2})`; // 橙色，随机透明度
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+
+            update() {
+                // 1. 粒子基本运动
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                // 2. 边界检查 (循环，模拟无边界空间)
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+
+                // 3. 鼠标互动 (核心 Antigravity 效果)
+                if (mouse.x !== undefined && mouse.y !== undefined) {
+                    let dx = this.x - mouse.x;
+                    let dy = this.y - mouse.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+
+                    if (distance < mouse.radius) {
+                        // 距离反比力 (推动力)
+                        let force = (mouse.radius - distance) / mouse.radius; 
+                        let angle = Math.atan2(dy, dx);
+
+                        // 粒子被推开
+                        this.x += Math.cos(angle) * force * 5; 
+                        this.y += Math.sin(angle) * force * 5;
+
+                        // 粒子在被推开时变大变亮 (涌动感)
+                        this.size = this.baseSize * (1 + force * 2); 
+
+                    } else {
+                        // 粒子逐渐恢复到初始大小
+                        if (this.size > this.baseSize) {
+                            this.size -= 0.1;
+                            if (this.size < this.baseSize) this.size = this.baseSize;
+                        }
+                    }
+                } else {
+                     // 鼠标离开时恢复大小
+                    if (this.size > this.baseSize) {
+                        this.size -= 0.1;
+                        if (this.size < this.baseSize) this.size = this.baseSize;
+                    }
+                }
+                
+                this.draw();
+            }
+        }
+
+        // 初始化粒子数组
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        // 动画循环
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0, 0, innerWidth, innerHeight); 
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+            }
+        }
+
+        initParticles();
+        animateParticles();
+    </script>
+</body>
+</html>
