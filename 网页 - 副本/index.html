@@ -10,15 +10,15 @@
     <style>
         /* --- 0. 核心配置 (设计语言：数字科幻/高精度渲染) --- */
         :root {
-            --bg-base: #020202; /* 主背景 */
-            --bg-darker: #000000; /* 用于 Footer 等深层区域 */
-            --bg-card: #0c0c0c; /* 卡片/容器背景 */
-            --bg-accent-light: #181818; /* 悬停/高光背景 */
+            --bg-base: #020202; 
+            --bg-darker: #000000; 
+            --bg-card: #0c0c0c; 
+            --bg-accent-light: #181818; 
             --accent: #FF9900;
             --accent-dim: rgba(255, 153, 0, 0.2);
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
-            --text-meta: #666666; /* 次要信息颜色 */
+            --text-meta: #666666; 
             --font-title: 'Roboto Mono', 'Noto Sans SC', sans-serif;
             --font-body: 'Noto Sans SC', sans-serif;
             --radius-main: 16px;
@@ -42,7 +42,7 @@
         /* --- 2. 粒子网格背景 --- */
         #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
 
-        /* --- 3. 导航栏 (新样式) --- */
+        /* --- 3. 导航栏 (桌面端样式) --- */
         nav {
             display: flex; justify-content: space-between; align-items: center;
             padding: 25px 60px; 
@@ -86,33 +86,45 @@
             position: absolute;
             bottom: 8px; 
             left: 50%;
-            transform: translateX(-50%) scaleX(0); /* 初始宽度为0 */
+            transform: translateX(-50%) scaleX(0); 
             transform-origin: center;
             width: 50%; 
             height: 3px;
             background-color: var(--accent);
             border-radius: 2px;
-            transition: transform 0.3s ease-out, box-shadow 0.3s; /* 添加过渡效果 */
+            transition: transform 0.3s ease-out, box-shadow 0.3s; 
         }
         .menu-link.active { color: var(--text-main); }
         .menu-link.active::after {
-            transform: translateX(-50%) scaleX(1); /* 激活时宽度展开 */
+            transform: translateX(-50%) scaleX(1); 
             box-shadow: 0 0 8px var(--accent-dim);
         }
 
         /* 移动端汉堡包默认隐藏在桌面端 */
         .hamburger { display: none; } 
         
-        /* 移动端菜单覆盖层 */
+        /* 移动端菜单覆盖层 (从右侧滑入) */
         .mobile-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.98); z-index: 99; display: none;
-            flex-direction: column; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.3s ease;
+            position: fixed; top: 0; right: 0; width: 80%; max-width: 300px; height: 100%; 
+            background: var(--bg-darker); z-index: 110; 
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;
+            padding: 80px 40px 20px;
+            transform: translateX(100%); /* 默认隐藏在右侧 */
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.5);
         }
-        .mobile-overlay.active { display: flex; opacity: 1; }
-        .mobile-overlay a { font-size: 36px; margin: 15px 0; font-family: var(--font-title); color: #fff; }
-        .mobile-overlay button { display: none; } 
+        .mobile-overlay.active { 
+            transform: translateX(0); /* 激活时滑入 */
+        }
+        .mobile-overlay-close {
+            position: absolute; top: 25px; right: 25px; font-size: 30px; color: var(--text-sub); z-index: 120;
+        }
+        .mobile-overlay a { 
+            font-size: 24px; margin: 15px 0; font-family: var(--font-title); color: #fff;
+            padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
 
         /* --- 4. Hero 区域 --- */
         header { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
@@ -262,27 +274,56 @@
         .social-links a:hover { color: var(--accent); transform: translateY(-3px); text-shadow: 0 0 5px var(--accent-dim); }
         .copyright { margin-top: 50px; font-size: 12px; opacity: 0.5; font-family: var(--font-title);}
 
-        /* --- 8. 适配移动端 --- */
+        /* --- 8. 适配移动端 (关键优化区域) --- */
         @media (max-width: 1024px) {
-            .menu-container { display: none; } 
-            .hamburger { display: block; } 
-            nav { width: calc(100% - 40px); padding: 20px; }
-            .hero-title { font-size: 50px; } .hero-title .zh { font-size: 24px; }
-            .about-layout { flex-direction: column; gap: 40px; text-align: center; }
-            .avatar-box { width: 200px; height: 200px; } 
-            .software-list { justify-content: center; }
-            .info-box h2 { font-size: 30px; }
+            /* 导航栏在移动端固定 */
+            nav { 
+                width: calc(100% - 40px); 
+                padding: 20px; 
+                position: fixed; /* 确保移动端也固定 */
+                background: rgba(0, 0, 0, 0.9); 
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--accent-dim); 
+            }
+            nav.scrolled { padding: 20px; } /* 保持一致的 padding */
+            .logo { font-size: 24px; }
 
-            /* Works 移动端逻辑 */
+            .menu-container { display: none; } /* 移动端隐藏桌面菜单 */
+            .hamburger { 
+                display: block; 
+                font-size: 30px; 
+                line-height: 0.5;
+                color: var(--accent);
+            } 
+            
+            /* Section 基础间距调整 */
+            .section-container { padding: 80px 20px; } /* 减小上下和两侧的 padding */
+
+            /* Hero 区域 */
+            .hero-title { font-size: 50px; } 
+            .hero-title .zh { font-size: 24px; letter-spacing: 5px; }
+            .hero-subtitle { font-size: 14px; letter-spacing: 5px; }
+
+            /* About 区域布局 */
+            .about-layout { flex-direction: column; gap: 40px; text-align: center; }
+            .avatar-box { width: 180px; height: 180px; } 
+            .info-box h2 { font-size: 28px; }
+            .software-list { justify-content: center; }
+
+            /* Works 区域布局 */
             .tabs-wrapper { grid-template-columns: 1fr; gap: 10px; }
             .tab-item { height: auto; padding: 15px; text-align: left; }
 
             .main-display { 
                 grid-template-columns: 1fr; 
-                padding: 20px; gap: 30px; 
+                padding: 20px; 
+                gap: 20px; /* 减小间距 */
             }
-            .display-image-container { height: 250px; order: -1; }
-            .display-text h2 { font-size: 28px; }
+            .display-image-container { 
+                height: 250px; 
+                order: -1; /* 确保图片在文字上方 */
+            }
+            .display-text h2 { font-size: 24px; }
             .btn-group { justify-content: center; } 
         }
     </style>
@@ -303,10 +344,11 @@
     </nav>
 
     <div class="mobile-overlay" id="mobileMenu">
-        <a href="#home" onclick="toggleMenu()">HOME</a>
-        <a href="#about" onclick="toggleMenu()">ABOUT</a>
-        <a href="#works" onclick="toggleMenu()">WORKS</a>
-        <a href="#contact" onclick="toggleMenu()">CONTACT</a>
+        <button class="mobile-overlay-close" onclick="toggleMenu()">×</button> 
+        <a href="#home" onclick="toggleMenu()">首页</a>
+        <a href="#about" onclick="toggleMenu()">关于</a>
+        <a href="#works" onclick="toggleMenu()">作品</a>
+        <a href="#contact" onclick="toggleMenu()">联系</a>
     </div>
 
     <header id="home">
@@ -429,6 +471,7 @@
             'contact': document.getElementById('contact')
         };
         const menuLinks = document.querySelectorAll('.menu-link');
+        const mobileMenu = document.getElementById('mobileMenu');
 
         function updateActiveMenu() {
             let activeSectionId = 'home';
@@ -447,6 +490,12 @@
                     link.classList.add('active');
                 }
             });
+            
+            // 移动端菜单也同步高亮（可选，但通常保持一致）
+            const mobileLinks = mobileMenu.querySelectorAll('a');
+            mobileLinks.forEach(link => {
+                link.style.color = link.href.includes(activeSectionId) ? 'var(--accent)' : '#fff';
+            });
         }
 
         window.addEventListener('scroll', () => {
@@ -457,10 +506,13 @@
             updateActiveMenu();
         });
 
-        // 初始化时设置一次活跃状态
         window.addEventListener('load', updateActiveMenu);
 
-        function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('active'); }
+        function toggleMenu() { 
+            mobileMenu.classList.toggle('active'); 
+            // 阻止在移动菜单打开时滚动 body
+            document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : 'visible';
+        }
 
         // --- Works 切换逻辑与数据 ---
         const projects = [
@@ -508,7 +560,7 @@
             tabs[index].classList.add('active');
 
             const displayArea = document.getElementById('displayArea');
-            const displayText = document.getElementById('displayText'); // 获取文字容器
+            const displayText = document.getElementById('displayText'); 
 
             // 1. 开始淡出文字和整个区域
             displayArea.classList.add('fading'); 
@@ -552,7 +604,7 @@
                 // 4. 移除淡出状态，开始淡入
                 displayArea.classList.remove('fading'); 
                 displayText.classList.remove('fading-content');
-            }, 300); // 300ms 对应 CSS 的 0.3s 过渡时间
+            }, 300); 
         }
 
         // --- 粒子特效逻辑 (网格+鼠标交互) ---
