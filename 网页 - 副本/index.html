@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="amber">
+<html lang="zh-CN" data-theme="arctic">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,11 +79,6 @@
             --text-sub: #586879;
             --text-meta: #99AAB5;
         }
-        
-        /* ------------------------
-        [主题 5] Obsidian Gold 已删除
-        ------------------------ */
-
 
         /* --- 1. 基础设置 & 全局过渡 --- */
         * { box-sizing: border-box; }
@@ -118,6 +113,8 @@
             display: flex; justify-content: space-between; align-items: center;
             padding: 25px 60px; position: fixed; top: 0; z-index: 100;
             left: 0; right: 0; 
+            /* 优化：导航栏整体的平滑过渡 */
+            transition: padding 0.3s var(--ease-smooth), background-color var(--theme-transition), backdrop-filter var(--theme-transition), border-bottom var(--theme-transition), box-shadow 0.3s;
         }
         nav.scrolled {
             padding: 15px 60px;
@@ -147,7 +144,7 @@
             display: none; font-size: 28px; color: var(--text-main); z-index: 101; 
             width: 30px; height: 30px; 
             justify-content: center; align-items: center; 
-            transition: transform 0.3s, opacity 0.3s; 
+            transition: transform 0.3s, opacity 0.3s, color var(--theme-transition); 
         }
         .mobile-overlay {
             position: fixed; top: 0; right: 0; width: 100%; height: 100%;
@@ -221,7 +218,12 @@
             text-align: justify; 
         }
 
-        .software-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+        /* 软件技能排版优化 */
+        .software-grid { 
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; 
+            /* 确保桌面端左对齐 */
+            justify-content: flex-start;
+        }
         .sw-tag { 
             padding: 8px 18px; background: var(--bg-card); border: 1px solid var(--border-color);
             border-radius: 100px; font-size: 12px; font-family: var(--font-title); 
@@ -369,17 +371,17 @@
             .section-container { padding: 100px 24px; }
             .about-layout { flex-direction: column; text-align: center; gap: 40px; }
             .avatar-box { width: 220px; height: 220px; }
+            
+            /* 手机端个人简介 UI 优化：文字居中对齐 */
             .info-box h2 { justify-content: center; }
+            .about-layout .info-box p {
+                text-align: center; 
+                padding: 0 10px; 
+            }
+            /* 手机端软件标签优化：居中对齐 */
             .software-grid { justify-content: center; }
             
-            .tabs-wrapper { grid-template-columns: 1fr; gap: 12px; margin-bottom: 30px; }
-            .tab-item { padding: 15px 20px; }
-            .main-display { grid-template-columns: 1fr; padding: 24px; gap: 24px; min-height: auto; }
-            .display-img-wrapper { height: 240px; order: -1; }
-            .display-content h3 { font-size: 28px; }
-            .btn-group { flex-direction: column; width: 100%; }
-            .btn { flex-grow: 1; text-align: center; } 
-            
+            /* 手机端菜单/导航栏过渡优化 */
             .menu-container { display: none; }
             .hamburger { display: flex; } 
             nav { 
@@ -388,6 +390,57 @@
                 background: var(--bg-glass); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border-color); 
             }
             .theme-fab { bottom: 20px; right: 20px; }
+
+            /* --- 移动端 Works (作品集) 排版优化 --- */
+            .works-header { margin-bottom: 30px; padding-left: 20px; }
+            .works-header h2 { font-size: 32px; }
+
+            /* 1. 标签栏改为横向滚动 */
+            .tabs-wrapper { 
+                grid-template-columns: none; 
+                display: flex; 
+                overflow-x: auto; 
+                padding: 0 24px 15px; /* 在移动端容器两侧添加 padding */
+                margin-left: -24px; 
+                margin-right: -24px;
+                gap: 15px; 
+                margin-bottom: 30px;
+            }
+            /* 隐藏滚动条 */
+            .tabs-wrapper::-webkit-scrollbar { height: 4px; }
+            .tabs-wrapper::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.5); border-radius: 2px; }
+            .tabs-wrapper::-webkit-scrollbar-track { background: var(--bg-card); }
+            
+            .tab-item {
+                flex-shrink: 0; /* 阻止标签收缩 */
+                min-width: 60%; /* 确保标签宽度足够，可滑动 */
+                padding: 20px;
+            }
+
+            /* 2. 主展示区改为单列堆叠 */
+            .main-display {
+                grid-template-columns: 1fr; /* 单列布局 */
+                gap: 30px; 
+                padding: 30px 20px; 
+                min-height: auto; 
+            }
+            
+            .display-img-wrapper {
+                height: 250px; /* 减小图片高度 */
+            }
+            
+            .display-content h3 {
+                font-size: 30px; 
+            }
+            
+            /* 3. 按钮改为垂直堆叠 */
+            .btn-group {
+                flex-direction: column; 
+                gap: 10px;
+            }
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -400,11 +453,11 @@
     <div class="theme-fab">
         <button class="fab-btn">🎨</button>
         <div class="theme-menu">
-            <div class="color-dot active" style="background: #FF9900;" onclick="setTheme('amber')" title="Amber Core"></div>
+            <div class="color-dot" style="background: #FF9900;" onclick="setTheme('amber')" title="Amber Core"></div>
             <div class="color-dot" style="background: #00F0FF;" onclick="setTheme('neon')" title="Cyber Neon"></div>
-            <div class="color-dot" style="background: #FF6AC1;" onclick="setTheme('sakura')" title="Sakura Vapor"></div>
-            <div class="color-dot" style="background: #FFFFFF; border:1px solid #ccc" onclick="setTheme('arctic')" title="Arctic White"></div>
-            </div>
+            <div class="color-dot" style="background: #FF6AC1;" onclick="setTheme('sakura')" title="Sakura Vapor (气泡)"></div>
+            <div class="color-dot active" style="background: #FFFFFF; border:1px solid #ccc" onclick="setTheme('arctic')" title="Arctic White (气泡)"></div>
+        </div>
     </div>
 
     <nav id="navbar">
@@ -430,7 +483,8 @@
             <div class="hero-subtitle">3D SCENE ARTIST</div>
             <h1 class="hero-title">
                 DIGITAL <br> REALM
-                <span class="zh">数字 · 视界</span> </h1>
+                <span class="zh">数字 · 视界 // 沉浸式构建</span>
+            </h1>
         </div>
         <div class="scroll-down">
             <span>SCROLL</span>
@@ -524,12 +578,28 @@
         }
 
         // --- Theme & Particle Logic ---
-        let currentParticleMode = 'structure';
-        let speedMultiplier = 0.3; 
-        let particleOpacityFactor = 1; 
-        let particleSizeFactor = 1; 
+        let currentParticleMode = 'float'; // 默认模式设置为arctic的float
+        let speedMultiplier = 0.8; 
+        let particleOpacityFactor = 0.3; 
+        let particleSizeFactor = 0.5; 
+        
+        let particleInteractionRadius = 150; 
+        
+        function handleTouch(e) {
+            if (e.touches.length > 0) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+                particleInteractionRadius = window.innerWidth < 1024 ? 80 : 150; 
+            }
+        }
+        function endTouch() {
+            mouse.x = null;
+            mouse.y = null;
+            particleInteractionRadius = 150; 
+        }
 
         function setTheme(themeName) {
+            // 1. CSS 颜色切换
             document.documentElement.setAttribute('data-theme', themeName);
             
             document.querySelectorAll('.color-dot').forEach(dot => {
@@ -537,43 +607,28 @@
                 if(dot.getAttribute('onclick').includes(themeName)) dot.classList.add('active');
             });
 
-            // 粒子逻辑：
-            if (themeName === 'amber') { // Obsidian Gold 主题已删除
+            // 2. 粒子参数更新 (不需要重置，让插值器处理过渡)
+            if (themeName === 'amber') { // 主题 1 (结构/静谧)
                 speedMultiplier = 0.2;
-                currentParticleMode = 'structure';
+                currentParticleMode = 'structure'; 
                 particleOpacityFactor = 1;
                 particleSizeFactor = 1;
-            } else if (themeName === 'neon') {
+            } else if (themeName === 'neon') { // 主题 2 (流动)
                 speedMultiplier = 1.5;
-                currentParticleMode = 'flow';
+                currentParticleMode = 'flow'; 
                 particleOpacityFactor = 1;
                 particleSizeFactor = 1.2; 
-            } else if (themeName === 'sakura') {
+            } else if (themeName === 'sakura') { // 主题 3 (气泡)
                 speedMultiplier = 0.8;
-                currentParticleMode = 'float';
+                currentParticleMode = 'float'; 
                 particleOpacityFactor = 0.8;
                 particleSizeFactor = 0.9;
-            } else if (themeName === 'arctic') { // Arctic White (Light/Subtle)
+            } else if (themeName === 'arctic') { // 主题 4 (气泡)
                 speedMultiplier = 0.8;
-                currentParticleMode = 'float';
+                currentParticleMode = 'float'; 
                 particleOpacityFactor = 0.3; 
                 particleSizeFactor = 0.5; 
-            } else { // 安全回退
-                speedMultiplier = 0.3;
-                currentParticleMode = 'structure';
-                particleOpacityFactor = 1;
-                particleSizeFactor = 1;
             }
-            
-            morphParticles();
-        }
-
-        function morphParticles() {
-            particles.forEach(p => {
-                // 给一个瞬时的速度扰动，模拟切换时的能量释放
-                p.vx += (Math.random() - 0.5) * 5;
-                p.vy += (Math.random() - 0.5) * 5;
-            });
         }
 
         // --- Nav ---
@@ -675,15 +730,27 @@
         const canvas = document.getElementById('particle-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
-        let mouse = { x: null, y: null, radius: 150 };
+        let mouse = { x: null, y: null }; 
 
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function resize() { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+            initParticles();
+        }
         window.addEventListener('resize', resize);
-        resize();
         
-        window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
+        window.addEventListener('mousemove', (e) => { 
+            mouse.x = e.x; 
+            mouse.y = e.y; 
+            particleInteractionRadius = 150;
+        });
         window.addEventListener('mouseleave', () => { mouse.x = null; });
 
+        window.addEventListener('touchstart', handleTouch);
+        window.addEventListener('touchmove', handleTouch);
+        window.addEventListener('touchend', endTouch);
+        window.addEventListener('touchcancel', endTouch); 
+        
         function getThemeColor() {
             const style = getComputedStyle(document.documentElement);
             const rgb = style.getPropertyValue('--accent-rgb').trim();
@@ -695,13 +762,13 @@
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
                 this.size = Math.random() * 2 + 0.5;
-                this.vx = (Math.random() - 0.5) * 0.5;
-                this.vy = (Math.random() - 0.5) * 0.5;
+                this.vx = (Math.random() - 0.5) * 0.1; 
+                this.vy = (Math.random() - 0.5) * 0.1;
             }
 
             update() {
                 let targetVx = 0, targetVy = 0;
-                const damping = 0.98; 
+                const interpolationFactor = 0.05; 
 
                 if (currentParticleMode === 'flow') {
                     targetVx = 2 * speedMultiplier; 
@@ -709,17 +776,24 @@
                 } else if (currentParticleMode === 'float') {
                     targetVx = (Math.random() - 0.5) * 0.2 * speedMultiplier;
                     targetVy = -0.5 * speedMultiplier; 
-                } else { // structure (默认/静谧模式)
-                    if (Math.abs(this.vx) < 0.1) this.vx = (Math.random() - 0.5) * 0.5 * speedMultiplier;
-                    if (Math.abs(this.vy) < 0.1) this.vy = (Math.random() - 0.5) * 0.5 * speedMultiplier;
+                } else { // structure (主题 1/静谧模式)
                     
-                    targetVx = this.vx * damping;
-                    targetVy = this.vy * damping;
+                    const targetSpeed = 0.5 * speedMultiplier; 
+                    
+                    if (Math.abs(this.vx) < targetSpeed * 2) {
+                         this.vx = (Math.random() - 0.5) * targetSpeed;
+                    }
+                    if (Math.abs(this.vy) < targetSpeed * 2) {
+                         this.vy = (Math.random() - 0.5) * targetSpeed;
+                    }
+                    
+                    targetVx = this.vx; 
+                    targetVy = this.vy;
                 }
 
-                // 平滑插值过渡速度 (0.05 决定了过渡的平滑程度)
-                this.vx += (targetVx - this.vx) * 0.05; 
-                this.vy += (targetVy - this.vy) * 0.05;
+                // [平滑过渡] 关键：插值到目标速度
+                this.vx += (targetVx - this.vx) * interpolationFactor; 
+                this.vy += (targetVy - this.vy) * interpolationFactor;
 
                 this.x += this.vx;
                 this.y += this.vy;
@@ -730,17 +804,17 @@
                 if (this.y > canvas.height) this.y = 0;
                 if (this.y < 0) this.y = canvas.height;
 
-                // 鼠标互动
+                // 鼠标/触控互动
                 const dx = mouse.x - this.x;
                 const dy = mouse.y - this.y;
                 const distSq = dx * dx + dy * dy;
                 
-                if (mouse.x !== null && distSq < mouse.radius * mouse.radius) {
+                if (mouse.x !== null && distSq < particleInteractionRadius * particleInteractionRadius) {
                     const dist = Math.sqrt(distSq);
                     const forceDirectionX = dx / dist;
                     const forceDirectionY = dy / dist;
-                    const maxForce = 10;
-                    const force = (mouse.radius - dist) / mouse.radius * maxForce;
+                    const maxForce = window.innerWidth < 1024 ? 6 : 10; 
+                    const force = (particleInteractionRadius - dist) / particleInteractionRadius * maxForce;
                     
                     this.vx -= forceDirectionX * force * 0.1;
                     this.vy -= forceDirectionY * force * 0.1;
@@ -751,7 +825,7 @@
                 ctx.beginPath();
                 // 应用大小因子
                 ctx.arc(this.x, this.y, this.size * particleSizeFactor, 0, Math.PI * 2); 
-                const [r, g, b] = getThemeColor();
+                const [r, g, b] = getThemeColor(); 
                 // 应用透明度因子
                 const alpha = (this.size / 2.5) * particleOpacityFactor; 
                 ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`; 
@@ -761,9 +835,20 @@
 
         function initParticles() {
             particles = [];
-            const particleCount = 100; 
+            if (!canvas.width || !canvas.height) return;
+
+            const screenArea = canvas.width * canvas.height;
+            const calculatedCount = Math.floor(screenArea / 15000); 
+            
+            let particleCount;
+            if (window.innerWidth < 768) {
+                particleCount = Math.min(Math.max(calculatedCount, 30), 80); 
+            } else {
+                particleCount = Math.min(Math.max(calculatedCount, 50), 200); 
+            }
+            
             for (let i = 0; i < particleCount; i++) {
-                particles.push(new Particle());
+                particles.push(new Particle()); 
             }
         }
 
@@ -799,13 +884,16 @@
                 p.draw();
             });
             
-            connect();
+            // 只有在非 'float' (结构/流动) 模式下才绘制连接线 (气泡效果)
+            if (currentParticleMode !== 'float') {
+                connect();
+            }
         }
 
         window.onload = () => {
-            setTheme('amber'); 
+            setTheme('arctic'); // 默认加载主题 4
+            resize(); 
             switchProject(0);
-            initParticles();
             animate(); 
         };
     </script>
