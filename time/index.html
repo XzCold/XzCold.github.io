@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.75, maximum-scale=0.75, user-scalable=no, viewport-fit=cover">
-    <title>XzCold OS v12.1.0 | Tech Art Core</title>
+    <title>XzCold OS v12.1.1 | Tech Art Core</title>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -423,13 +423,8 @@
     // [核心重写] 每日任务算法 - 时区强制偏移
     function getLogicalDate() { 
         const now = new Date();
-        // 1. 获取 UTC 时间戳
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        // 2. 转换为北京时间 (UTC+8)
         const beijingTime = new Date(utc + (3600000 * 8)); 
-        // 3. 定义新的一天开始于北京时间 07:00:00
-        // 如果当前是 06:59:59 BJ，我们减去7小时，仍在前一天。
-        // 如果当前是 07:00:00 BJ，我们减去7小时，进入新的一天 00:00:00。
         beijingTime.setHours(beijingTime.getHours() - 7); 
         return beijingTime.toISOString().split('T')[0];
     }
@@ -440,14 +435,9 @@
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const bj = new Date(utc + (3600000 * 8));
         
-        // 目标: 下一个 07:00:00
         let target = new Date(bj);
         target.setHours(7, 0, 0, 0);
-        
-        // 如果当前已经过了7点，目标则是明天的7点
-        if(bj.getHours() >= 7) { 
-            target.setDate(target.getDate() + 1); 
-        }
+        if(bj.getHours() >= 7) { target.setDate(target.getDate() + 1); }
         
         const diff = target - bj;
         const h = Math.floor(diff / 3600000);
@@ -549,7 +539,7 @@
             2. TASKS MUST BE SHORT (<20 chars).
             3. CATEGORIES MUST MATCH EXACTLY (Tech, Eng, Design, Math, Logic, Phil):
                - "tech" (Tech): UE5/Blender specific hotkey or tool trick.
-               - "eng" (English): 3D/CG Term (e.g. Albedo, Bake) + English Definition (Simple) + Chinese Context. NOT JUST A TRANSLATION.
+               - "eng" (English): Format: "Term : English Def -> Chinese Meaning". Example: "Albedo : Base color -> 漫反射".
                - "design" (Design): Composition, Lighting, Color Theory, or Visual Storytelling task.
                - "math" (Math): Concept Awareness (e.g. Dot Product usage) - NO CALCULATIONS. Just "Understand [Concept] for [Usage]".
                - "logic" (Social Logic): TikTok Content Strategy, Psychology, Industry Networking.
@@ -584,7 +574,7 @@
             TASK: Generate ONE short (<15 chars) 3D Tech Art task for category [${data.pType}]. 
             STRICT DEFINITION:
             - TECH: UE5/Blender tool trick (e.g. Nanite, Lumen, GeoNodes).
-            - ENG: CG Term + Eng Def + Chinese Meaning.
+            - ENG: Format: "Term : English Def -> Chinese".
             - DESIGN: Composition/Lighting.
             - MATH: Concept Awareness (No Calc).
             - LOGIC: Social Logic (TikTok Strategy/Networking).
@@ -593,7 +583,10 @@
             requestParts.push({ text: prompt });
         }
         else if (type === 'focus_done') { requestParts.push({ text: "User finished focus session. Give short cyber-style praise in Chinese (No Pinyin)." }); }
-        else if (type === 'eng_done') { requestParts.push({ text: "User finished visual training. Give short encouraging phrase in Chinese (No Pinyin)." }); }
+        else if (type === 'eng_done') { 
+            // [修复] 成长页面语录强制中文
+            requestParts.push({ text: "User finished 3D art visual training. Give a short, cool, cyber-style encouraging phrase in SIMPLIFIED CHINESE ONLY. NO PINYIN. NO ENGLISH." }); 
+        }
         else if (type === 'ping') { requestParts.push({ text: "Ping." }); }
 
         if (type === 'daily') {
@@ -850,7 +843,28 @@
         all.filter(x=>x.date===t).forEach(x=>{ sl.innerHTML += renderItem(x); });
     };
     
-    window.openApiModal=function(){document.getElementById('apiModal').style.display='flex';document.getElementById('apiKeyInput').value=localStorage.getItem('xz_gemini_key')||'';document.getElementById('apiBaseInput').value=localStorage.getItem('xz_api_base')||'';};window.closeApiModal=function(){document.getElementById('apiModal').style.display='none';};window.saveApiKey=function(){const k=document.getElementById('apiKeyInput').value.trim(),b=document.getElementById('apiBaseInput').value.trim()||"https://generativelanguage.googleapis.com";if(k){localStorage.setItem('xz_gemini_key',k);localStorage.setItem('xz_api_base',b);closeApiModal();askGemini('ping');}};window.exportData=function(){const d={tasks:DB.getOr('tasks',[]),history:DB.getOr('history',{}),streak:DB.getOr('streak',0),maxStreak:DB.getOr('max_streak',0),lastStreakDate:DB.getOr('last_streak_date',''),eng:DB.getOr('eng_tasks',[false,false,false]),engStats:{streak:DB.getOr('eng_streak',0),maxStreak:DB.getOr('eng_max_streak',0),maxLvl:DB.getOr('eng_max_lvl',1),lastDate:DB.getOr('eng_last_date','')},goal:DB.getOr('goal',5),globalCount:DB.getOr('global_task_count',0), perf:DB.getOr('perf_score', 1000)};navigator.clipboard.writeText(JSON.stringify(d)).then(()=>alert("已复制!"));};window.importData=function(){const s=prompt("请粘贴备份代码:");if(s){try{const d=JSON.parse(s);if(d.tasks)DB.set('tasks',d.tasks);if(d.history)DB.set('history',d.history);if(d.streak)DB.set('streak',d.streak);if(d.maxStreak)DB.set('max_streak',d.maxStreak);if(d.lastStreakDate)DB.set('last_streak_date',d.lastStreakDate);if(d.eng)DB.set('eng_tasks',d.eng);if(d.engStats){DB.set('eng_streak',d.engStats.streak);DB.set('eng_max_streak',d.engStats.maxStreak);DB.set('eng_max_lvl',d.engStats.maxLvl);DB.set('eng_last_date',d.engStats.lastDate);}if(d.goal)DB.set('goal',d.goal);if(d.globalCount)DB.set('global_task_count',d.globalCount);if(d.perf)DB.set('perf_score',d.perf);alert("恢复成功!");location.reload();}catch(e){alert("无效代码");}}};function checkEnglishReset(){const t=getLogicalDate(),l=DB.getOr('eng_last_date','');if(l&&l!==t){const y=new Date();y.setDate(y.getDate()-1);if(l!==y.toISOString().split('T')[0])DB.set('eng_streak',0);DB.set('eng_tasks',[false,false,false]);}renderEng();}function checkFocusStreakReset(){const t=getLogicalDate(),l=DB.getOr('last_streak_date','');if(l&&l!==t){const y=new Date();y.setDate(y.getDate()-1);if(l!==y.toISOString().split('T')[0])DB.set('streak',0);}renderStats();}window.editTimer=function(){if(!state.run){const v=prompt("设置分钟:",state.total/60);if(v&&!isNaN(v)){state.total=parseInt(v)*60;state.curr=state.total;renderTimer();}}};window.adjTime=function(m){if(!state.run){state.total+=m*60;if(state.total<60)state.total=60;state.curr=state.total;renderTimer();}};window.toggleTimer=function(){if(state.run){clearInterval(state.timer);state.run=false;localStorage.removeItem('xz_timer_end');localStorage.removeItem('xz_timer_total');settleTime();btnUpdate();}else{state.run=true;state.endTime=Date.now()+(state.curr*1000);localStorage.setItem('xz_timer_end');localStorage.setItem('xz_timer_total');state.timer=setInterval(tick,1000);btnUpdate();}};function btnUpdate(){const b=document.getElementById('f_btn');b.innerText=state.run?"暂停":"开始专注";b.style.background=state.run?"var(--primary)":"var(--primary)";b.style.color="#000";}function tick(){if(!state.run)return;const r=state.endTime-Date.now();if(r<=0){state.curr=0;finishFocus();}else{state.curr=Math.round(r/1000);renderTimer();}}function checkRunningTimer(){const e=localStorage.getItem('xz_timer_end'),tot=localStorage.getItem('xz_timer_total');if(e&&tot){const end=parseInt(e);state.total=parseInt(tot);if(end>Date.now()){state.endTime=end;state.run=true;state.timer=setInterval(tick,1000);btnUpdate();}else{state.curr=0;settleTime();localStorage.removeItem('xz_timer_end');localStorage.removeItem('xz_timer_total');state.curr=state.total;renderTimer();alert("专注完成 (离线)");}}}function renderTimer(){document.getElementById('f_display').innerText=`${Math.floor(state.curr/60).toString().padStart(2,'0')}:${(state.curr%60).toString().padStart(2,'0')}`;document.getElementById('f_ring').style.setProperty('--p',`${(state.curr/state.total)*360}deg`);}function settleTime(){const el=state.total-state.curr,m=Math.floor(el/60);if(m>0){const t=getLogicalDate();let h=DB.getOr('history',{});h[t]=(h[t]||0)+m;DB.set('history',h);if(h[t]>=state.goal*60){const l=DB.getOr('last_streak_date','');if(l!==t){const ns=DB.getOr('streak',0)+1;DB.set('streak',ns);const max=DB.getOr('max_streak',0);if(ns>max)DB.set('max_streak',ns);DB.set('last_streak_date',t);}}state.total=state.curr;updateGlobalState();}}function finishFocus(){clearInterval(state.timer);state.run=false;localStorage.removeItem('xz_timer_end');localStorage.removeItem('xz_timer_total');askGemini('focus_done');settleTime();state.curr=state.total;renderTimer();btnUpdate();}function renderStats(){const t=getLogicalDate();document.getElementById('f_today').innerText=DB.getOr('history',{})[t]||0;document.getElementById('f_streak').innerText=DB.getOr('streak',0);document.getElementById('f_max_streak').innerText=DB.getOr('max_streak',0);}window.editGoal=function(){const v=prompt("目标 (小时):",state.goal);if(v){state.goal=parseFloat(v);DB.set('goal',state.goal);document.getElementById('f_goal').innerText=v+'h';updateGlobalState();}};window.changeMonth=function(d){state.date.setMonth(state.date.getMonth()+d);renderCal();};function renderCal(){const y=state.date.getFullYear(),m=state.date.getMonth();document.getElementById('cal_title').innerText=`${y} / ${m+1}`;const f=new Date(y,m,1).getDay(),d=new Date(y,m+1,0).getDate(),c=document.getElementById('cal_body'),hist=DB.getOr('history',{});c.innerHTML='';document.getElementById('sched_current_date').innerText=state.selDate;document.getElementById('sched_focus_val').innerText=(hist[state.selDate]||0)+"m";for(let i=0;i<f;i++)c.appendChild(document.createElement('div'));for(let i=1;i<=d;i++){const el=document.createElement('div');el.className='cal-day';const s=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;if(s===getLogicalDate())el.classList.add('today');if(s===state.selDate)el.classList.add('active');if((hist[s]||0)>0)el.classList.add('has-data');el.onclick=()=>{state.selDate=s;renderCal();renderTasks();};el.innerHTML=`<span>${i}</span><div class="cal-dot"></div>`;c.appendChild(el);}}
+    window.openApiModal=function(){document.getElementById('apiModal').style.display='flex';document.getElementById('apiKeyInput').value=localStorage.getItem('xz_gemini_key')||'';document.getElementById('apiBaseInput').value=localStorage.getItem('xz_api_base')||'';};window.closeApiModal=function(){document.getElementById('apiModal').style.display='none';};window.saveApiKey=function(){const k=document.getElementById('apiKeyInput').value.trim(),b=document.getElementById('apiBaseInput').value.trim()||"https://generativelanguage.googleapis.com";if(k){localStorage.setItem('xz_gemini_key',k);localStorage.setItem('xz_api_base',b);closeApiModal();askGemini('ping');}};window.exportData=function(){const d={tasks:DB.getOr('tasks',[]),history:DB.getOr('history',{}),streak:DB.getOr('streak',0),maxStreak:DB.getOr('max_streak',0),lastStreakDate:DB.getOr('last_streak_date',''),eng:DB.getOr('eng_tasks',[false,false,false]),engStats:{streak:DB.getOr('eng_streak',0),maxStreak:DB.getOr('eng_max_streak',0),maxLvl:DB.getOr('eng_max_lvl',1),lastDate:DB.getOr('eng_last_date','')},goal:DB.getOr('goal',5),globalCount:DB.getOr('global_task_count',0), perf:DB.getOr('perf_score', 1000)};navigator.clipboard.writeText(JSON.stringify(d)).then(()=>alert("已复制!"));};window.importData=function(){const s=prompt("请粘贴备份代码:");if(s){try{const d=JSON.parse(s);if(d.tasks)DB.set('tasks',d.tasks);if(d.history)DB.set('history',d.history);if(d.streak)DB.set('streak',d.streak);if(d.maxStreak)DB.set('max_streak',d.maxStreak);if(d.lastStreakDate)DB.set('last_streak_date',d.lastStreakDate);if(d.eng)DB.set('eng_tasks',d.eng);if(d.engStats){DB.set('eng_streak',d.engStats.streak);DB.set('eng_max_streak',d.engStats.maxStreak);DB.set('eng_max_lvl',d.engStats.maxLvl);DB.set('eng_last_date',d.engStats.lastDate);}if(d.goal)DB.set('goal',d.goal);if(d.globalCount)DB.set('global_task_count',d.globalCount);if(d.perf)DB.set('perf_score',d.perf);alert("恢复成功!");location.reload();}catch(e){alert("无效代码");}}};function checkEnglishReset(){const t=getLogicalDate(),l=DB.getOr('eng_last_date','');if(l&&l!==t){const y=new Date();y.setDate(y.getDate()-1);if(l!==y.toISOString().split('T')[0])DB.set('eng_streak',0);DB.set('eng_tasks',[false,false,false]);}renderEng();}function checkFocusStreakReset(){const t=getLogicalDate(),l=DB.getOr('last_streak_date','');if(l&&l!==t){const y=new Date();y.setDate(y.getDate()-1);if(l!==y.toISOString().split('T')[0])DB.set('streak',0);}renderStats();}window.editTimer=function(){if(!state.run){const v=prompt("设置分钟:",state.total/60);if(v&&!isNaN(v)){state.total=parseInt(v)*60;state.curr=state.total;renderTimer();}}};window.adjTime=function(m){if(!state.run){state.total+=m*60;if(state.total<60)state.total=60;state.curr=state.total;renderTimer();}};
+    
+    // [Bug修复] localStorage.setItem 必须传入值
+    window.toggleTimer=function(){
+        if(state.run){
+            clearInterval(state.timer);
+            state.run=false;
+            localStorage.removeItem('xz_timer_end');
+            localStorage.removeItem('xz_timer_total');
+            settleTime();
+            btnUpdate();
+        }else{
+            state.run=true;
+            state.endTime=Date.now()+(state.curr*1000);
+            localStorage.setItem('xz_timer_end', state.endTime); // 修复: 添加 state.endTime
+            localStorage.setItem('xz_timer_total', state.total); // 修复: 添加 state.total
+            state.timer=setInterval(tick,1000);
+            btnUpdate();
+        }
+    };
+    
+    function btnUpdate(){const b=document.getElementById('f_btn');b.innerText=state.run?"暂停":"开始专注";b.style.background=state.run?"var(--primary)":"var(--primary)";b.style.color="#000";}function tick(){if(!state.run)return;const r=state.endTime-Date.now();if(r<=0){state.curr=0;finishFocus();}else{state.curr=Math.round(r/1000);renderTimer();}}function checkRunningTimer(){const e=localStorage.getItem('xz_timer_end'),tot=localStorage.getItem('xz_timer_total');if(e&&tot){const end=parseInt(e);state.total=parseInt(tot);if(end>Date.now()){state.endTime=end;state.run=true;state.timer=setInterval(tick,1000);btnUpdate();}else{state.curr=0;settleTime();localStorage.removeItem('xz_timer_end');localStorage.removeItem('xz_timer_total');state.curr=state.total;renderTimer();alert("专注完成 (离线)");}}}function renderTimer(){document.getElementById('f_display').innerText=`${Math.floor(state.curr/60).toString().padStart(2,'0')}:${(state.curr%60).toString().padStart(2,'0')}`;document.getElementById('f_ring').style.setProperty('--p',`${(state.curr/state.total)*360}deg`);}function settleTime(){const el=state.total-state.curr,m=Math.floor(el/60);if(m>0){const t=getLogicalDate();let h=DB.getOr('history',{});h[t]=(h[t]||0)+m;DB.set('history',h);if(h[t]>=state.goal*60){const l=DB.getOr('last_streak_date','');if(l!==t){const ns=DB.getOr('streak',0)+1;DB.set('streak',ns);const max=DB.getOr('max_streak',0);if(ns>max)DB.set('max_streak',ns);DB.set('last_streak_date',t);}}state.total=state.curr;updateGlobalState();}}function finishFocus(){clearInterval(state.timer);state.run=false;localStorage.removeItem('xz_timer_end');localStorage.removeItem('xz_timer_total');askGemini('focus_done');settleTime();state.curr=state.total;renderTimer();btnUpdate();}function renderStats(){const t=getLogicalDate();document.getElementById('f_today').innerText=DB.getOr('history',{})[t]||0;document.getElementById('f_streak').innerText=DB.getOr('streak',0);document.getElementById('f_max_streak').innerText=DB.getOr('max_streak',0);}window.editGoal=function(){const v=prompt("目标 (小时):",state.goal);if(v){state.goal=parseFloat(v);DB.set('goal',state.goal);document.getElementById('f_goal').innerText=v+'h';updateGlobalState();}};window.changeMonth=function(d){state.date.setMonth(state.date.getMonth()+d);renderCal();};function renderCal(){const y=state.date.getFullYear(),m=state.date.getMonth();document.getElementById('cal_title').innerText=`${y} / ${m+1}`;const f=new Date(y,m,1).getDay(),d=new Date(y,m+1,0).getDate(),c=document.getElementById('cal_body'),hist=DB.getOr('history',{});c.innerHTML='';document.getElementById('sched_current_date').innerText=state.selDate;document.getElementById('sched_focus_val').innerText=(hist[state.selDate]||0)+"m";for(let i=0;i<f;i++)c.appendChild(document.createElement('div'));for(let i=1;i<=d;i++){const el=document.createElement('div');el.className='cal-day';const s=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;if(s===getLogicalDate())el.classList.add('today');if(s===state.selDate)el.classList.add('active');if((hist[s]||0)>0)el.classList.add('has-data');el.onclick=()=>{state.selDate=s;renderCal();renderTasks();};el.innerHTML=`<span>${i}</span><div class="cal-dot"></div>`;c.appendChild(el);}}
     
     function renderEng(){
         const s=DB.getOr('eng_streak',0),ms=DB.getOr('eng_max_streak',0),xp=getTaskCount();
