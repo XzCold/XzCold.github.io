@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>这是一份礼物🎁</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        /* --- 基础设定 --- */
+        body { 
+            background-color: #000; 
+            color: #a3a3a3; 
+            font-family: 'Noto Sans SC', sans-serif; 
+            line-height: 1.6; 
+            overflow-x: hidden; /* 核心修复：禁止横向滚动 */
+            margin: 0; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .serif { font-family: 'Noto Serif SC', serif; }
+        
+        /* 核心修复：全局图片限制 */
+        img { max-width: 100%; height: auto; display: block; }
+        * { box-sizing: border-box; }
+
+        /* --- STAGE 1: 加载动画 --- */
+        #stage-loading {
+            position: fixed; inset: 0; background: #000; z-index: 30000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .loader-box { width: 100%; max-width: 320px; text-align: left; }
+        .loader-bar-bg { width: 100%; height: 4px; background: #1a1a1a; margin: 15px 0; border-radius: 2px; position: relative; overflow: hidden; }
+        .loader-bar-fill {
+            height: 100%; background: #dc2626; width: 0%;
+            transition: width 0.2s linear;
+            box-shadow: 0 0 15px #dc2626;
+        }
+        .sys-log {
+            font-family: monospace; font-size: 10px; color: #555; height: 80px; overflow: hidden;
+            border-left: 2px solid #333; padding-left: 10px; display: flex; flex-direction: column-reverse;
+        }
+        .log-item { margin-bottom: 2px; opacity: 0.7; word-break: break-all; }
+        .log-highlight { color: #dc2626; font-weight: bold; }
+
+        /* --- STAGE 2: 警告弹窗 --- */
+        #stage-warning {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 20000;
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 15px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .warning-border {
+            border: 2px solid #333; padding: 30px 20px; width: 100%; max-width: 500px; background: #050505;
+            box-shadow: 0 0 30px rgba(220, 38, 38, 0.1); position: relative;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .warning-border::before {
+            content: ''; position: absolute; top: -2px; left: -2px; width: 15px; height: 15px; border-top: 3px solid #dc2626; border-left: 3px solid #dc2626;
+        }
+        .warning-border::after {
+            content: ''; position: absolute; bottom: -2px; right: -2px; width: 15px; height: 15px; border-bottom: 3px solid #dc2626; border-right: 3px solid #dc2626;
+        }
+        .warning-icon { font-size: 40px; margin-bottom: 15px; display: block; animation: pulse 1s infinite; }
+        .warning-title { color: #dc2626; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; line-height: 1.2; }
+        .warning-text { color: #fff; font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; font-family: 'Noto Serif SC', serif; }
+        .enter-btn {
+            padding: 12px 30px; background: #dc2626; color: #fff; border: none; font-size: 0.9rem;
+            cursor: pointer; font-weight: bold; letter-spacing: 2px; transition: all 0.3s;
+            text-transform: uppercase; margin-top: 15px; width: 100%; max-width: 280px;
+            clip-path: polygon(5% 0, 100% 0, 100% 70%, 95% 100%, 0 100%, 0 30%);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .enter-btn:active { transform: scale(0.98); background: #b91c1c; }
+
+        /* --- STAGE 3: 主容器 --- */
+        .container-xl { 
+            width: 100%; max-width: 900px; margin: 0 auto; background: #0a0a0a; min-height: 100vh; 
+            position: relative; border-left: 1px solid #1a1a1a; border-right: 1px solid #1a1a1a; padding-bottom: 80px;
+            opacity: 0; transform: translateY(50px); transition: opacity 1s ease, transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+            display: none; overflow: hidden; /* 防止内部元素撑开 */
+        }
+        .container-visible { opacity: 1 !important; transform: translateY(0) !important; display: block !important; }
+
+        .hazard-bar {
+            height: 8px; background: repeating-linear-gradient(45deg, #7f1d1d, #7f1d1d 8px, #000 8px, #000 16px);
+            width: 100%; position: sticky; top: 0; z-index: 50; box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+        }
+        .law-box { 
+            border: 1px solid #333; background: linear-gradient(90deg, #0f0f0f 0%, #000 100%); 
+            padding: 20px 15px; margin: 25px 0; border-left: 4px solid #dc2626; position: relative; 
+            font-size: 0.9rem;
+        }
+        .law-box::before {
+            content: '⚖️ LEGAL WARNING'; position: absolute; top: -10px; left: 15px; 
+            background: #dc2626; color: #fff; padding: 0 8px; font-size: 9px; font-weight: bold; letter-spacing: 1px; line-height: 18px;
+        }
+
+        h1 { 
+            font-size: clamp(1.8rem, 5vw, 2.5rem); 
+            line-height: 1.2; font-weight: 900; color: #fff; 
+            margin-bottom: 1rem; letter-spacing: -0.5px; 
+            text-shadow: 0 0 20px rgba(220,38,38,0.3); 
+        }
+        h2 { 
+            font-size: clamp(1.3rem, 4vw, 1.8rem); 
+            color: #e5e5e5; margin-top: 4rem; margin-bottom: 1.5rem; 
+            font-weight: 800; border-bottom: 1px solid #333; padding-bottom: 10px; position: relative; 
+            line-height: 1.3;
+        }
+        h2::after { 
+            content: 'EVIDENCE FILED'; position: absolute; right: 0; bottom: 8px; 
+            font-size: 8px; color: #444; letter-spacing: 1px; 
+        }
+        h3 { font-size: 1.1rem; color: #fff; margin-top: 1.5rem; margin-bottom: 0.8rem; font-weight: 700; }
+        .highlight { color: #ef4444; font-weight: bold; background: rgba(220, 38, 38, 0.1); padding: 0 2px; }
+
+        /* 证据卡片适配 - 核心修复 overflow */
+        .evidence-card {
+            background: #0d0d0d; border: 1px solid #222; padding: 10px; margin: 20px 0; 
+            border-radius: 4px; transition: border-color 0.3s; position: relative;
+            overflow: hidden; /* 防止内容溢出 */
+        }
+        .evidence-card:active { border-color: #555; }
+        .card-tag { 
+            position: absolute; top: -8px; right: 8px; background: #7f1d1d; color: #fff; 
+            font-size: 0.6rem; padding: 2px 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; z-index: 10;
+        }
+
+        .img-wrapper { 
+            width: 100%; overflow: hidden; position: relative; cursor: zoom-in; 
+            background: #000; border: 1px solid #1a1a1a; display: flex; justify-content: center; align-items: flex-start;
+            height: 350px; 
+        }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0.9; transition: opacity 0.3s; }
+        
+        /* 错误状态修正 */
+        .img-error { 
+            height: 200px !important; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            border: 2px dashed #7f1d1d; cursor: pointer; color: #7f1d1d; background: rgba(127, 29, 29, 0.05); 
+            box-sizing: border-box; /* 确保padding不撑大 */
+        }
+        .missing-name { 
+            font-size: 0.6rem; color: #666; margin-top: 10px; font-family: monospace; 
+            background: #000; padding: 2px 5px; 
+            max-width: 95%; 
+            word-break: break-all; 
+            overflow-wrap: break-word; /* 强制换行修复 */
+            white-space: normal;
+        }
+
+        /* --- Lightbox 移动端优化 --- */
+        #lightbox { 
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); 
+            z-index: 10000; overflow-y: auto; backdrop-filter: blur(5px); 
+            -webkit-overflow-scrolling: touch;
+        }
+        #lightbox-content { 
+            min-height: 100vh; width: 100%; 
+            display: flex; justify-content: center; align-items: flex-start; 
+            padding: 60px 0; box-sizing: border-box;
+        }
+        #lightbox img { 
+            width: 100%; max-width: 100vw; /* 强制不超屏幕 */
+            height: auto; 
+            border: none; box-shadow: 0 0 30px rgba(0,0,0,0.8); display: block;
+        }
+        .close-lightbox { 
+            position: fixed; top: 15px; right: 15px; color: #fff; font-size: 30px; cursor: pointer; z-index: 10001; 
+            background: rgba(30,30,30,0.8); border-radius: 50%; width: 44px; height: 44px; 
+            text-align: center; line-height: 44px; border: 1px solid #444;
+        }
+        
+        /* 全量相册 */
+        #gallery-overlay { display: none; position: fixed; inset: 0; background: #000000; z-index: 9999; overflow-y: auto; padding: 60px 10px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 1400px; margin: 0 auto; }
+        .gallery-item { aspect-ratio: 1/1; border: 1px solid #333; overflow: hidden; cursor: pointer; position: relative; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        .gallery-close { 
+            position: fixed; top: 15px; right: 15px; font-size: 30px; color: #fff; cursor: pointer; z-index: 10002; 
+            background: rgba(0,0,0,0.5); width: 40px; height: 40px; text-align: center; line-height: 40px; border-radius: 50%;
+        }
+        
+        .album-btn {
+            display: block; width: 100%; max-width: 500px; margin: 60px auto 30px; padding: 20px; 
+            background: #0a0a0a; border: 1px solid #333; color: #fff; 
+            font-family: monospace; cursor: pointer; transition: all 0.3s;
+            text-transform: uppercase; letter-spacing: 1px; text-align: center;
+            border-left: 4px solid #ef4444; font-size: 0.9rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .album-btn:active { background: #111; border-color: #ef4444; transform: scale(0.98); }
+
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* --- 移动端核心适配 --- */
+        @media (max-width: 768px) {
+            .grid-2, .grid-4 { grid-template-columns: 1fr; gap: 20px; }
+            .grid-4-mobile-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            
+            .img-wrapper { height: auto; aspect-ratio: 4/5; max-height: 300px; }
+            
+            .p-12, .p-8, .p-10 { padding: 25px 20px !important; }
+            .md\:p-24 { padding: 30px 20px !important; }
+            
+            .text-3xl { font-size: 1.8rem !important; }
+            .text-2xl { font-size: 1.4rem !important; }
+            .leading-8 { line-height: 1.8 !important; }
+            
+            .flex-col-mobile { flex-direction: column !important; }
+            .gap-10 { gap: 2rem !important; }
+            
+            .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+            
+            .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 2px; }
+            
+            .container-xl { padding-bottom: 60px; border: none; }
+        }
+    </style>
+</head>
+<body class="selection:bg-red-900 selection:text-white">
+
+    <div id="stage-loading">
+        <div class="loader-box">
+            <div class="text-xs font-mono text-red-500 mb-2">SYSTEM: INITIALIZING SECURE CONNECTION...</div>
+            <div class="text-xl font-black text-white tracking-widest uppercase mb-4">LOADING EVIDENCE</div>
+            <div class="loader-bar-bg"><div class="loader-bar-fill" id="progress-fill"></div></div>
+            <div class="sys-log" id="sys-log"></div>
+        </div>
+    </div>
+
+    <div id="stage-warning">
+        <div class="warning-border">
+            <div class="warning-icon">⚠️</div>
+            <h2 class="warning-title" style="margin-top:0; border:none; padding-bottom:0;">严 正 警 告</h2>
+            <div class="warning-text">请 罗 浩 文 先 生 认 真 阅 读</div>
+            <p style="color:#888; font-size:0.85rem; line-height:1.6; margin-bottom:20px; text-align: left;">
+                本页面内容已进行区块链哈希存证。<br>
+                包含关于您涉嫌<strong>教唆作假、性掠夺及刑事威胁</strong>的完整证据链。<br>
+                请勿试图通过网络攻击掩盖真相，所有访问记录均已被日志系统锁定。
+            </p>
+            <button class="enter-btn" onclick="startMainContent()">[ 我已知悉后果并继续 ]</button>
+        </div>
+    </div>
+
+    <div class="container-xl" id="main-content">
+        <div class="hazard-bar"></div>
+        
+        <div class="p-8 md:p-24 text-center border-b border-neutral-900 bg-[#080808]">
+            <div class="inline-block border border-red-900 text-red-600 text-[10px] px-3 py-1 mb-6 font-mono tracking-[0.2em] uppercase animate-pulse">
+                PUBLIC INDICTMENT FILE / SEVERE LEVEL
+            </div>
+            <h1 class="serif tracking-tight">
+                罗浩文 (自分)<br>
+                严重劣迹行为调查报告<br>
+                <span class="text-red-700 mt-2 block" style="font-size: 0.5em; font-weight: 700;">暨法律后果严重警示书</span>
+            </h1>
+            <p class="max-w-3xl mx-auto text-sm text-gray-400 mt-6 leading-7 text-justify md:text-center">
+                本报告基于受害人 <strong>王展颜</strong>（ID:79）提供的真实聊天记录、转账凭证整理而成。
+                旨在对当事人 <strong>罗浩文</strong>（ID:天黑黑/自分）实施的<strong>“教唆伪证”、“性掠夺”、“连环欺诈”、“恶意吸血”及“非法持有传播隐私视频威胁”</strong>等行为进行全方位揭露。
+                <br><span class="text-red-600 font-bold block mt-2 text-center">⚠️ 警告：当事人表现出极度反社会人格与冷血特质</span>
+            </p>
+        </div>
+
+        <div class="bg-[#0c0c0c] border-b border-neutral-900 p-8 flex flex-col md:flex-row gap-10">
+            <div class="flex-1">
+                <h4 class="text-[10px] text-gray-600 uppercase tracking-widest font-bold border-b border-neutral-800 pb-2 mb-3">THE ACCUSED (被公示人)</h4>
+                <div class="text-3xl font-bold text-white mb-2 serif">罗浩文</div>
+                <div class="text-xs text-gray-500 space-y-2 font-mono">
+                    <p>曾用ID: 天黑黑 / 自分</p>
+                    <p>所属: 长沙南方职业学院 (含浦大道)</p>
+                    <p class="text-red-500">TEL: 173****2189</p>
+                </div>
+            </div>
+            <div class="flex-1">
+                <h4 class="text-[10px] text-gray-600 uppercase tracking-widest font-bold border-b border-neutral-800 pb-2 mb-3">LEGAL VIOLATIONS (触犯条款)</h4>
+                <ul class="text-xs space-y-3 text-gray-400">
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2 font-bold">!!!</span>
+                        <span><strong>教唆伪证/欺诈：</strong> 逼迫他人提供虚假信息以逃避法律责任。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2 font-bold">!!!</span>
+                        <span><strong>性自主权侵害：</strong> 利用欺诈手段诱奸，违背妇女意愿。</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2 font-bold">!!!</span>
+                        <span><strong>刑事勒索预备：</strong> 非法持有并扬言散布隐私视频。</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="p-6 md:p-20">
+
+            <h2>CHAPTER I. 人性泯灭：为了不坐牢，教唆女生报假名</h2>
+            <div class="prose max-w-none text-gray-300 text-sm md:text-base text-justify">
+                <p>
+                    2025年10月12日，受害人王展颜发现疑似怀孕（验孕棒两道杠）并告知罗浩文。在这一涉及生命与法律责任的重大危机时刻，罗浩文的反应彻底暴露了其<strong>反社会型人格</strong>特征。
+                </p>
+                <h3>1. 教唆报假名，企图瞒天过海</h3>
+                <p>
+                    面对受害人及其家属可能的问责，罗浩文的第一反应不是承担责任，而是<strong>极度恐惧自己会因为与未成年发生关系而坐牢</strong>。他在聊天记录中明确指示：“你也可以报假名字假信息啊”。他甚至直言不讳：“我不想这辈子就这么毁了”。
+                </p>
+                <div class="law-box">
+                    <p class="font-bold text-red-500 mb-2">⚖️ 法律定性：教唆欺诈与逃避抚养</p>
+                    <p class="law-content text-gray-400">
+                        这种教唆他人欺骗监护人的行为，在主观上构成了恶意逃避抚养/赔偿责任的企图。若受害人听信其言导致后续权益受损，罗浩文作为<strong>教唆者</strong>，在民事赔偿中将承担加倍的过错责任。
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid-2 mt-6">
+                <div class="evidence-card mt-0">
+                    <div class="card-tag">自私实锤</div>
+                    <div class="img-wrapper" onclick="openLightbox(this)">
+                        <img src="微信图片_20260120162654_4776_935.png" onerror="imgError(this)" alt="教唆证据">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>“我蹲那么几年出来这辈子也完了”</span></div>
+                </div>
+                <div class="evidence-card mt-0">
+                    <div class="card-tag">教唆作假</div>
+                    <div class="img-wrapper" onclick="openLightbox(this)">
+                        <img src="fake_1.jpg" onerror="imgError(this)" alt="教唆证据2">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>“你也可以报假名字假信息啊”</span></div>
+                </div>
+            </div>
+
+            <div class="prose max-w-none text-gray-300 mt-8 text-sm md:text-base text-justify">
+                <h3>2. 法律洗地与精神胁迫</h3>
+                <p>
+                    为了进一步给自己洗白，罗浩文展现出了惊人的“法律嗅觉”。他在对话中反复强调<strong>“满14岁双方自愿”、“这事就不算违法”</strong>，试图用冷冰冰的法律条款压制受害者的痛苦。
+                    <br>更令人发指是，在受害人因恐惧而短暂未回消息时，他竟以<strong>“删好友、断联”</strong>作为精神胁迫，逼迫受害人配合他的“洗白计划”。
+                </p>
+            </div>
+
+            <div class="grid-2 mt-6">
+                <div class="evidence-card mt-0">
+                    <div class="img-wrapper" onclick="openLightbox(this)">
+                        <img src="legal_1.jpg" onerror="imgError(this)" alt="法律洗地1">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>“满14岁不违法”——冷血借口</span></div>
+                </div>
+                <div class="evidence-card mt-0">
+                    <div class="img-wrapper" onclick="openLightbox(this)">
+                        <img src="微信图片_20260120162650_4770_935.png" onerror="imgError(this)" alt="冷漠回应">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>受害人崩溃时，他在玩《我的世界》</span></div>
+                </div>
+            </div>
+
+            <h2>CHAPTER II. 性掠夺与连环欺诈</h2>
+            <div class="prose max-w-none text-gray-300 text-sm md:text-base text-justify">
+                <p>
+                    通过复盘时间线，我们发现罗浩文的行为构成了典型的“性掠夺”与“双重欺诈”。这是一场精心策划的狩猎。
+                </p>
+                <h3>1. 以“复合”为诱饵的诱奸式性行为</h3>
+                <p>
+                    2025年9月19日，罗浩文以“做了就和好”为诱饵，诱导当时并不情愿的王展颜发生关系。在过程中，他无视女方哭诉，<strong>拒绝采取保护措施（内射）</strong>，并在事后第二天强迫女方服用避孕药，随即翻脸否认恋爱关系。
+                </p>
+                <div class="law-box">
+                    <p class="font-bold text-red-500 mb-2">⚖️ 严重法律警示：性自主权侵害</p>
+                    <p class="law-content text-gray-400">
+                        根据<strong>《中华人民共和国民法典》</strong>，违背妇女意愿，利用欺诈手段（如虚假承诺复合）获取性机会，虽然在刑法认定上存在门槛，但在道德与民事层面已构成严重的<strong>性自主权侵害</strong>。
+                    </p>
+                </div>
+                
+                <div class="evidence-card">
+                    <div class="card-tag">完整长图</div>
+                    <div class="img-wrapper" style="height: auto; aspect-ratio: 9/16; max-height: 400px;" onclick="openLightbox(this)">
+                        <img src="微信图片_20260120163335_781_235.png" onerror="imgError(this)" alt="无套/吃药证据">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>证据链 C：无保护措施并逼迫吃药（点击查看）</span></div>
+                </div>
+
+                <h3>2. 时间管理：无缝衔接的出轨实录</h3>
+                <p>
+                    最新证据显示，罗浩文在与王展颜发生关系的同一时间段（9月19日/21日），实际上已经与另一名女生（贵州籍）确立了恋爱关系（9月14日）。他利用信息不对称，同时欺骗了两名女性。
+                </p>
+            </div>
+
+            <div class="evidence-card">
+                <div class="card-tag">出轨实锤</div>
+                <div class="img-wrapper" style="height: auto; aspect-ratio: 9/16; max-height: 400px;" onclick="openLightbox(this)">
+                    <img src="微信图片_20260120203652_46_990.png" onerror="imgError(this)" alt="出轨时间线证据">
+                </div>
+                <div class="caption p-3 text-center text-xs text-gray-500"><span>证据链 D：9.14 已与他人恋爱，9.19 仍诱骗受害人</span></div>
+            </div>
+
+            <h2>CHAPTER III. 恶意经济侵占</h2>
+            <div class="prose max-w-none text-gray-300 text-sm md:text-base text-justify">
+                <p>
+                    这段关系中存在严重的经济不对等。资金几乎是<strong>单向地从受害人流向罗浩文</strong>。这不再是简单的恋爱消费，而是以恋爱为名的“供养”。
+                </p>
+                <p>
+                    从数百元的大额转账到几十元的日常消费，罗浩文长期将受害人视为经济来源。甚至在“520”等特殊节日，也是女方在支付费用。
+                </p>
+            </div>
+
+            <div class="grid-2 mt-6">
+                <div class="evidence-card mt-0">
+                    <div class="card-tag">网络乞讨</div>
+                    <div class="img-wrapper" style="height: auto; aspect-ratio: 16/9;" onclick="openLightbox(this)">
+                        <img src="微信图片_20260120190216_4834_935.jpg" onerror="imgError(this)">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>“我房租还差三百”</span></div>
+                </div>
+                 <div class="evidence-card mt-0">
+                    <div class="card-tag">游戏皮肤</div>
+                    <div class="img-wrapper" style="height: auto; aspect-ratio: 16/9;" onclick="openLightbox(this)">
+                        <img src="微信图片_20260120162702_4787_935.png" onerror="imgError(this)">
+                    </div>
+                    <div class="caption p-3 text-center text-xs text-gray-500"><span>“我好想要这个天玄刀”</span></div>
+                </div>
+            </div>
+            
+            <div class="grid-4 grid-4-mobile-2 mt-6">
+                <div class="img-wrapper h-24" onclick="openLightbox(this)"><img src="微信图片_20260120185953_4826_935.jpg" onerror="imgError(this)"></div>
+                <div class="img-wrapper h-24" onclick="openLightbox(this)"><img src="微信图片_20260120185937_4825_935.jpg" onerror="imgError(this)"></div>
+                <div class="img-wrapper h-24" onclick="openLightbox(this)"><img src="微信图片_20260120185929_4823_935.jpg" onerror="imgError(this)"></div>
+                <div class="img-wrapper h-24" onclick="openLightbox(this)"><img src="微信图片_20260120185934_4824_935.jpg" onerror="imgError(this)"></div>
+            </div>
+            <div class="caption mb-8 text-center text-xs text-gray-500 mt-2">单向转账流水（点击查看大图）</div>
+
+            <h2>CHAPTER IV. 隐私视频与刑事威胁</h2>
+            <div class="prose max-w-none text-gray-300 text-sm md:text-base text-justify">
+                <p>
+                    这是整个事件中性质最恶劣、法律后果最严重的部分。罗浩文在关系结束后，并未好聚好散，而是选择了触犯刑法的边缘。
+                </p>
+                <h3>1. 承认非法持有并拒绝删除</h3>
+                <p>
+                    当受害人要求删除相关隐私视频时，罗浩文态度傲慢，宣称<strong>“我自己拍的有”、“懒得找”、“我不发”</strong>（但也明确表示不删除）。这表明他<strong>主观上故意保留受害人隐私视频</strong>，将其作为潜在的威胁筹码。
+                </p>
+            </div>
+
+            <div class="evidence-card" style="border-color: #7f1d1d; background: rgba(127,29,29,0.05);">
+                <div class="card-tag">非法持有</div>
+                <div class="img-wrapper" style="height: auto; aspect-ratio: 9/16; max-height: 400px;" onclick="openLightbox(this)">
+                    <img src="微信图片_20260120222904_83_990.png" onerror="imgError(this)" alt="拒绝删除视频">
+                </div>
+                <div class="caption p-4 bg-red-900/10 text-red-500 font-bold text-center text-xs">
+                    <span>证据 F：承认持有隐私视频并拒绝删除（“懒得找”）</span>
+                </div>
+            </div>
+
+            <div class="prose max-w-none text-gray-300 mt-8 text-sm md:text-base text-justify">
+                <h3>2. 图穷匕见：散布威胁与勒索预备</h3>
+                <p>
+                    如果说“持有”是隐患，那么他发给朋友的威胁则是犯罪预备。他扬言：<span class="highlight">“别让我给视频什么的到处传播了，传播到熟人手里也不太好。”</span>
+                </p>
+                <div class="law-box">
+                    <p class="font-bold text-red-500 mb-2">🚨 红色通缉级法律警示</p>
+                    <p class="law-content text-gray-400">
+                        根据<strong>《中华人民共和国治安管理处罚法》</strong>及<strong>《刑法》</strong>：以散布隐私、裸照视频等方式威胁他人，涉嫌<strong>侮辱罪 (第246条)</strong> 及 <strong>敲诈勒索罪 (第274条)</strong>。一旦实施，将面临严厉的刑事追责。
+                    </p>
+                </div>
+            </div>
+
+            <div class="evidence-card">
+                <div class="card-tag">刑事勒索</div>
+                <div class="img-wrapper" style="height: auto; aspect-ratio: 16/9;" onclick="openLightbox(this)">
+                    <img src="微信图片_20260120162633_4749_935.jpg" onerror="imgError(this)" alt="威胁言论">
+                </div>
+                <div class="caption p-4 bg-red-900/10 text-red-500 font-bold text-center text-xs">
+                    <span>证据 G：罗浩文发出的传播威胁（绿色气泡）</span>
+                </div>
+            </div>
+
+        </div>
+
+        <button class="album-btn" onclick="openGallery()">
+            [ 点击查看全量证据档案库 ]<br>
+            <span style="font-size: 0.7rem; opacity: 0.7; display: block; margin-top: 5px;">FULL EVIDENCE ARCHIVE</span>
+        </button>
+
+        <div class="p-8 text-center border-t border-red-900 bg-[#080808]">
+            <p class="text-xs text-gray-500 max-w-xl mx-auto leading-6 font-mono">
+                互联网并非法外之地。<br>
+                罗浩文若敢泄露任何隐私，必将受到法律最严厉的制裁。<br>
+                ARCHIVED FOR LEGAL REFERENCE · 2026
+            </p>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="closeLightbox()">
+        <div class="close-lightbox">×</div>
+        <div id="lightbox-content">
+            <img id="lb-img" src="" onclick="event.stopPropagation()">
+        </div>
+        <div style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%); color:#fff; font-size:0.7rem; background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:100px; white-space:nowrap;">支持缩放 / 滑动长图</div>
+    </div>
+
+    <div id="gallery-overlay">
+        <div class="gallery-close" onclick="closeGallery()">×</div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+        <div style="height: 100px;"></div> </div>
+
+    <script>
+        /* --- 1. 启动逻辑 --- */
+        window.onload = function() {
+            startLoading();
+        };
+
+        function startLoading() {
+            const bar = document.getElementById('progress-fill');
+            const log = document.getElementById('sys-log');
+            const logs = [
+                "INITIALIZING SECURE PROTOCOL...",
+                "CONNECTING TO EVIDENCE SERVER...",
+                "VERIFYING HASH: 9a8b7c6d...",
+                "DECRYPTING CHAT LOGS...",
+                "ANALYZING FINANCIAL RECORDS...",
+                "LOCKING IP ADDRESS...",
+                "ACCESS GRANTED."
+            ];
+            
+            setTimeout(() => { bar.style.width = '30%'; }, 100);
+            setTimeout(() => { bar.style.width = '70%'; }, 800);
+            setTimeout(() => { bar.style.width = '100%'; }, 1600);
+
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i >= logs.length) {
+                    clearInterval(interval);
+                    finishLoading();
+                    return;
+                }
+                const p = document.createElement('div');
+                p.className = 'log-item';
+                p.innerHTML = `> ${logs[i]}`;
+                if(i === logs.length-1) p.className += ' log-highlight';
+                log.prepend(p); 
+                i++;
+            }, 250);
+        }
+
+        function finishLoading() {
+            setTimeout(() => {
+                document.getElementById('stage-loading').style.display = 'none';
+                document.getElementById('stage-warning').style.display = 'flex';
+            }, 500);
+        }
+
+        function startMainContent() {
+            const warning = document.getElementById('stage-warning');
+            const main = document.getElementById('main-content');
+            
+            warning.style.opacity = '0';
+            setTimeout(() => {
+                warning.style.display = 'none';
+                main.style.display = 'block';
+                void main.offsetWidth;
+                main.classList.add('container-visible');
+            }, 500);
+        }
+
+        /* --- 2. 图片文件名全量列表 --- */
+        const allImages = [
+            '微信图片_20260120162633_4749_935.jpg',
+            'fake_1.jpg',
+            '微信图片_20260120162643_4764_935.png',
+            'legal_1.jpg',
+            '微信图片_20260120162636_4757_935.png',
+            '微信图片_20260120162640_4759_935.jpg',
+            '20cb42513ec1bb44978c18fc22f494da.mp4',
+            '微信图片_20260120162634_4753_935.jpg',
+            '微信图片_20260120162635_4755_935.jpg',
+            '微信图片_20260120162650_4771_935.png',
+            '微信图片_20260120162654_4776_935.png',
+            '微信图片_20260120162649_4769_935.png',
+            '微信图片_20260120162648_4767_935.png',
+            '微信图片_20260120162652_4773_935.png',
+            '微信图片_20260120162654_4775_935.png',
+            '微信图片_20260120162653_4774_935.png',
+            '微信图片_20260120162648_4768_935.png',
+            '微信图片_20260120162651_4772_935.png',
+            '微信图片_20260120162650_4770_935.png',
+            '微信图片_20260120162658_4782_935.png',
+            '微信图片_20260120162655_4777_935.png',
+            '微信图片_20260120162659_4783_935.png',
+            '微信图片_20260120162656_4779_935.png',
+            '微信图片_20260120162656_4778_935.png',
+            '微信图片_20260120162657_4780_935.png',
+            '微信图片_20260120162701_4786_935.png',
+            '微信图片_20260120162658_4781_935.png',
+            '微信图片_20260120162700_4784_935.png',
+            '微信图片_20260120162700_4785_935.png',
+            '微信图片_20260120163440_784_235.png',
+            '微信图片_20260120163409_783_235.png',
+            '微信图片_20260120163335_781_235.png',
+            '微信图片_20260120163532_786_235.png',
+            '微信图片_20260120163348_782_235.png',
+            '微信图片_20260120163554_787_235.png',
+            '微信图片_20260120163638_788_235.png',
+            '微信图片_20260120162702_4787_935.png',
+            '微信图片_20260120163657_789_235.png',
+            '微信图片_20260120163502_785_235.png',
+            '微信图片_20260120185953_4826_935.jpg',
+            '微信图片_20260120185937_4825_935.jpg',
+            '微信图片_20260120185929_4823_935.jpg',
+            '微信图片_20260120185934_4824_935.jpg',
+            '微信图片_20260120222904_83_990.png',
+            '微信图片_20260120203652_46_990.png',
+            '微信图片_20260120190216_4834_935.jpg'
+        ];
+
+        function imgError(img) {
+            img.style.display = 'none';
+            const src = img.getAttribute('src');
+            const wrapper = img.parentElement;
+            
+            if(wrapper.querySelector('.img-error')) return;
+
+            wrapper.className = 'img-error';
+            wrapper.innerHTML = `
+                <div class="text-2xl mb-2">⚠️</div>
+                <div class="text-xs font-bold text-red-500">证据未同步</div>
+                <div class="missing-name">${src}</div>
+            `;
+        }
+
+        function openLightbox(el) {
+            const img = el.querySelector('img');
+            if(img && img.src && !img.style.display.includes('none')) {
+                const lb = document.getElementById('lightbox');
+                const lbImg = document.getElementById('lb-img');
+                lbImg.src = img.src;
+                lb.style.display = 'block'; 
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function openGallery() {
+            const grid = document.getElementById('gallery-grid');
+            grid.innerHTML = ''; 
+            
+            allImages.forEach(src => {
+                if(src.endsWith('.mp4')) return; 
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.innerHTML = `<img src="${src}" onerror="this.parentElement.style.display='none'">`;
+                div.onclick = function() {
+                    const lb = document.getElementById('lightbox');
+                    document.getElementById('lb-img').src = this.querySelector('img').src;
+                    lb.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                };
+                grid.appendChild(div);
+            });
+            
+            document.getElementById('gallery-overlay').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeGallery() {
+            document.getElementById('gallery-overlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    </script>
+</body>
+</html>
