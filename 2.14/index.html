@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>1314YJY (Customizable)</title>
+    <style>
+        :root {
+            --bg-color: #fff0f5; 
+            --text-color: #5d4e4e;
+            --highlight-pink: #ff8fa3;
+            --highlight-blue: #88ccff;
+            --ui-scale: 1.0; /* 全局 UI 缩放变量 */
+        }
+
+        body { 
+            margin: 0; overflow: hidden; background-color: var(--bg-color); 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif; 
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            cursor: default; transition: background-color 3.5s ease-in-out;
+            height: 100vh;
+        }
+
+        /* --- 加载页 --- */
+        #loading-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999;
+            background-color: var(--bg-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease;
+        }
+        .loading-text {
+            color: var(--highlight-pink); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;
+            font-weight: bold; animation: pulse-text 1.5s infinite;
+        }
+        .progress-container {
+            width: 60%; max-width: 240px; height: 4px; background: rgba(255, 143, 163, 0.2);
+            border-radius: 4px; overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%; width: 0%; background: var(--highlight-pink);
+            border-radius: 4px; transition: width 0.3s ease-out;
+            box-shadow: 0 0 10px rgba(255, 143, 163, 0.5);
+        }
+        @keyframes pulse-text { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        /* --- 背景层 --- */
+        #bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+            background: radial-gradient(circle at 50% 50%, #ffffff 0%, #fff0f5 60%, #ffe0e9 100%);
+            transition: opacity 3.5s ease-in-out;
+        }
+        #bg-layer-night {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 60%, #020617 100%);
+            opacity: 0; transition: opacity 3.5s ease-in-out;
+        }
+        #canvas-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        
+        /* --- 字幕容器 --- */
+        #subtitle-container { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; z-index: 10; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            padding: 0 40px; box-sizing: border-box;
+        }
+        .cinematic-line { 
+            position: absolute; width: 100%; text-align: center; opacity: 0; 
+            white-space: pre-wrap; will-change: opacity, transform, filter; 
+            top: 50%; left: 0; right: 0; margin: auto; 
+            box-sizing: border-box; padding: 0 30px;
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; 
+            filter: blur(10px); transform: scale(0.96) translateY(-40%); 
+            transition: opacity 2.0s cubic-bezier(0.25, 1, 0.5, 1), 
+                        transform 2.0s cubic-bezier(0.25, 1, 0.5, 1), 
+                        filter 2.0s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .line-annotation {
+            font-size: 0.6em; color: #ff8fa3; font-weight: bold; letter-spacing: 1px;
+            opacity: 0.9; margin-top: 5px; animation: pulse-note 2s infinite ease-in-out;
+        }
+        @keyframes pulse-note { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+        .line-active { opacity: 1; filter: blur(0px); transform: scale(1) translateY(-50%); }
+        .line-exit { opacity: 0 !important; filter: blur(15px); transform: scale(1.05) translateY(-60%); transition: opacity 1.5s ease-in-out, transform 1.5s ease-in-out, filter 1.5s ease-in-out; }
+
+        /* --- UI 组件：音乐挂件 --- */
+        #music-widget {
+            position: fixed; top: 30px; left: 30px; z-index: 100;
+            display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+            opacity: 0; transform-origin: top left; /* 关键：缩放原点 */
+            transform: translateY(-20px) scale(var(--ui-scale));
+            transition: opacity 1s ease, transform 0.2s ease; max-width: 450px; 
+        }
+        #music-widget.show { opacity: 1; transform: translateY(0) scale(var(--ui-scale)); }
+        
+        .music-header {
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 10px 20px 10px 10px; border-radius: 60px;
+            border: 1px solid rgba(255,255,255,0.9);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            transition: all 3.5s ease;
+        }
+        .music-header.dark-mode {
+            background: rgba(11, 22, 44, 0.85); border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .music-header.dark-mode .song-title { color: #ffffff !important; }
+        .music-header.dark-mode .song-artist { color: #cbd5e1 !important; }
+        .music-header.dark-mode .bar { background: #ff8fa3 !important; }
+
+        .music-cover {
+            width: 55px; height: 55px; border-radius: 50%;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            position: relative; animation: spin 10s linear infinite; flex-shrink: 0;
+            border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: background-image 0.5s ease;
+        }
+        .music-cover::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 12px; height: 12px; background: #fff; border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .music-info { display: flex; flex-direction: column; }
+        .song-title { font-size: 17px; font-weight: bold; color: #444; margin-bottom: 2px; transition: color 3.5s ease; }
+        .song-artist { font-size: 12px; color: #888; letter-spacing: 1px; transition: color 3.5s ease; }
+        
+        #lyrics-display {
+            margin-left: 10px; display: flex; flex-direction: column; gap: 6px;
+            text-shadow: 0 1px 4px rgba(255,255,255,0.9);
+            opacity: 0.9; transition: opacity 0.5s ease; min-height: 50px; 
+        }
+        body.dark-theme #lyrics-display { text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+        #lyrics-display.fade-change { opacity: 0; }
+        .lyric-eng {
+            font-size: 18px; font-weight: 600; color: #555;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.2; transition: color 3.5s ease;
+        }
+        .lyric-chn {
+            font-size: 14px; color: #888;
+            font-family: "PingFang SC", sans-serif; font-weight: normal; transition: color 3.5s ease;
+        }
+        body.dark-theme .lyric-eng { color: #f8fafc; }
+        body.dark-theme .lyric-chn { color: #cbd5e1; }
+
+        .music-wave { display: flex; align-items: flex-end; height: 16px; gap: 3px; margin-left: 10px; }
+        .bar { width: 4px; background: #ff8fa3; border-radius: 2px; animation: equalizer 1s ease-in-out infinite; transition: background 3.5s ease; }
+        .bar:nth-child(1) { height: 60%; animation-delay: 0s; }
+        .bar:nth-child(2) { height: 30%; animation-delay: 0.2s; }
+        .bar:nth-child(3) { height: 70%; animation-delay: 0.4s; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes equalizer { 0%, 100% { height: 30%; } 50% { height: 100%; } }
+
+        /* --- [新增] 视觉控制台 --- */
+        #settings-btn {
+            position: fixed; top: 30px; right: 30px; z-index: 200;
+            width: 44px; height: 44px; background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.8);
+            transform-origin: center;
+            transform: scale(var(--ui-scale));
+        }
+        #settings-btn:hover { background: rgba(255,255,255,0.9); transform: scale(calc(var(--ui-scale) * 1.1)); }
+        #settings-btn svg { width: 22px; height: 22px; fill: #5d4e4e; transition: fill 3.5s ease; }
+        body.dark-theme #settings-btn { background: rgba(11, 22, 44, 0.6); border: 1px solid rgba(255,255,255,0.15); }
+        body.dark-theme #settings-btn svg { fill: #cbd5e1; }
+
+        #settings-panel {
+            position: fixed; top: 85px; right: 30px; z-index: 199;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px; padding: 20px; width: 180px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transform-origin: top right;
+            transform: scale(0.9); opacity: 0; pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        #settings-panel.show { transform: scale(var(--ui-scale)); opacity: 1; pointer-events: auto; }
+        body.dark-theme #settings-panel { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); }
+
+        .setting-item { margin-bottom: 18px; }
+        .setting-item:last-child { margin-bottom: 0; }
+        .setting-label { font-size: 12px; color: #666; margin-bottom: 8px; display: flex; justify-content: space-between; font-weight: bold; }
+        body.dark-theme .setting-label { color: #aaa; }
+        
+        .setting-slider {
+            width: 100%; -webkit-appearance: none; height: 4px; background: #ddd; border-radius: 2px; outline: none;
+        }
+        body.dark-theme .setting-slider { background: #334155; }
+        .setting-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px; background: var(--highlight-pink);
+            border-radius: 50%; cursor: pointer; transition: transform 0.1s;
+        }
+        .setting-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        /* --- 密码组件 --- */
+        #password-widget {
+            position: fixed; bottom: 20%; left: 50%; transform: translateX(-50%) scale(var(--ui-scale));
+            transform-origin: bottom center;
+            z-index: 800; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.2s ease; 
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        #password-widget.show { opacity: 1; pointer-events: auto; bottom: 25%; }
+        .pwd-glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 30px; padding: 12px 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex; align-items: center; gap: 10px;
+        }
+        #pwd-input {
+            background: transparent; border: none; outline: none; width: 140px;
+            font-size: 18px; letter-spacing: 4px; color: #5d4e4e; text-align: center; font-family: inherit;
+        }
+        #pwd-input::placeholder { color: rgba(93, 78, 78, 0.5); font-size: 14px; letter-spacing: 1px; }
+        .pwd-lock-icon { width: 18px; height: 18px; fill: #ff8fa3; }
+
+        /* --- 开启按钮 --- */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.8s ease; cursor: pointer;
+        }
+        #start-overlay.show-overlay { opacity: 1; display: flex; }
+        .start-btn {
+            padding: 15px 40px; border: 2px solid #ff8fa3; border-radius: 50px;
+            background: #fff; color: #ff8fa3; font-size: 1.2rem; font-weight: bold;
+            box-shadow: 0 5px 15px rgba(255, 143, 163, 0.3);
+            animation: btn-pulse 2s infinite; transform: scale(var(--ui-scale));
+        }
+        @keyframes btn-pulse { 0%, 100% { transform: scale(var(--ui-scale)); } 50% { transform: scale(calc(var(--ui-scale) * 1.05)); } }
+
+        /* --- 信纸按钮 --- */
+        #letter-btn {
+            position: fixed; bottom: 30px; right: 30px; z-index: 100;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: #fff; box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; opacity: 0; pointer-events: none; transform-origin: bottom right;
+            transform: translateY(20px) scale(var(--ui-scale));
+            transition: all 2.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #letter-btn.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(var(--ui-scale)); }
+        #letter-btn svg { width: 28px; height: 28px; fill: #ff8fa3; }
+        #letter-btn:hover { transform: scale(calc(var(--ui-scale) * 1.1)); }
+
+        /* --- 弹窗 --- */
+        #full-text-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 240, 245, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 200; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.6s ease; }
+        #full-text-modal.show { opacity: 1; visibility: visible; }
+        .modal-content { width: 85%; max-width: 600px; max-height: 80vh; overflow-y: auto; background: #fff; border-radius: 15px; padding: 50px 40px; box-shadow: 0 10px 40px rgba(255, 180, 190, 0.2); text-align: left; color: #665555; line-height: 1.8; position: relative; transform: translateY(20px); transition: transform 0.6s ease; -webkit-overflow-scrolling: touch; }
+        #full-text-modal.show .modal-content { transform: translateY(0); }
+        .modal-content h2 { color: #ff8fa3; text-align: center; margin-bottom: 30px; font-weight: normal; font-family: "KaiTi", serif; }
+        .close-btn { display: block; margin: 30px auto 0; padding: 8px 30px; border: 1px solid #ffb7c5; background: #fff; border-radius: 20px; color: #ff8fa3; cursor: pointer; transition: 0.3s; }
+        .close-btn:hover { background: #fff0f5; }
+
+        @media (max-width: 768px) {
+            .cinematic-line { width: 100%; line-height: 1.6; }
+            .modal-content { width: 90%; padding: 30px 20px; }
+            #music-widget { top: 20px; left: 20px; max-width: 85%; }
+            .lyric-eng { font-size: 16px; }
+            .lyric-chn { font-size: 13px; }
+            #password-widget { bottom: 30%; }
+            #settings-btn { top: 20px; right: 20px; }
+            #settings-panel { top: 75px; right: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-layer">
+        <div class="loading-text">资源加载中...</div>
+        <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
+    </div>
+
+    <div id="bg-layer"></div>
+    <div id="bg-layer-night"></div>
+    <canvas id="canvas-layer"></canvas>
+
+    <div id="settings-btn" onclick="toggleSettings()">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    </div>
+
+    <div id="settings-panel">
+        <div class="setting-item">
+            <span class="setting-label">文字大小 <span id="text-val">100%</span></span>
+            <input type="range" min="0.5" max="1.5" step="0.1" value="1.0" class="setting-slider" oninput="updateTextScale(this.value)">
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">界面缩放 <span id="ui-val">100%</span></span>
+            <input type="range" min="0.5" max="1.3" step="0.1" value="1.0" class="setting-slider" oninput="updateUIScale(this.value)">
+        </div>
+    </div>
+
+    <div id="music-widget">
+        <div class="music-header" id="music-header-box">
+            <div class="music-cover" id="music-cover"></div>
+            <div class="music-info">
+                <span class="song-title" id="song-title">不散的夏之灯</span>
+                <span class="song-artist" id="song-artist">Minase Inori / chelly</span>
+            </div>
+            <div class="music-wave"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        </div>
+        <div id="lyrics-display"><div class="lyric-eng">Instrumental</div><div class="lyric-chn">奏乐中...</div></div>
+    </div>
+
+    <div id="password-widget">
+        <div class="pwd-glass">
+            <svg class="pwd-lock-icon" viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>
+            <input type="number" id="pwd-input" placeholder="输入密钥解锁" pattern="[0-9]*" inputmode="numeric">
+        </div>
+    </div>
+
+    <div id="start-overlay"><div class="start-btn">开启</div></div>
+    <div id="subtitle-container"></div>
+    <div id="letter-btn" onclick="showFullText()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+
+    <div id="full-text-modal">
+        <div class="modal-content">
+            <h2>致 悦悦</h2>
+            <div id="letter-content"></div>
+            <button class="close-btn" onclick="hideFullText()">收起信件</button>
+        </div>
+    </div>
+
+    <audio id="bgm-summer" preload="auto" playsinline webkit-playsinline><source src="不散的夏之灯 - 鸣潮先约电台 _ Minase _ chelly_H.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm-star" preload="auto" playsinline webkit-playsinline><source src="繁星、新生，与你 Astrum Unicum - 鸣潮先约电台 _ YUE_STEVEN_H.mp3" type="audio/mpeg"></audio>
+
+    <script>
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        
+        // --- 控制台逻辑 ---
+        function toggleSettings() {
+            document.getElementById('settings-panel').classList.toggle('show');
+        }
+        function updateTextScale(val) {
+            document.getElementById('text-val').innerText = Math.round(val * 100) + "%";
+            const baseSize = isMobile ? 25 : 35; // 基准字号
+            const lines = document.querySelectorAll('.cinematic-line');
+            lines.forEach(line => {
+                line.style.fontSize = (baseSize * val) + 'px';
+            });
+        }
+        function updateUIScale(val) {
+            document.getElementById('ui-val').innerText = Math.round(val * 100) + "%";
+            document.documentElement.style.setProperty('--ui-scale', val);
+        }
+
+        // --- 加载器逻辑 ---
+        let loadProgress = 0;
+        const progressBar = document.getElementById('progress-bar');
+        const loadingLayer = document.getElementById('loading-layer');
+        const startOverlay = document.getElementById('start-overlay');
+
+        const fakeProgress = setInterval(() => {
+            if (loadProgress < 85) {
+                loadProgress += Math.random() * 6;
+                progressBar.style.width = loadProgress + '%';
+            }
+        }, 100);
+
+        window.onload = () => {
+            clearInterval(fakeProgress);
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                loadingLayer.style.opacity = 0;
+                setTimeout(() => {
+                    loadingLayer.style.display = 'none';
+                    startOverlay.classList.add('show-overlay');
+                    init(); 
+                }, 800);
+            }, 500);
+        };
+
+        const TIME_PHASE_1 = 310; 
+        const TIME_PHASE_2 = 150; 
+        const PASSWORD = "80115";
+        const COVER_IMG_1 = "微信图片_20260214203654_914_235.jpg"; 
+        const COVER_IMG_2 = "微信图片_20260214203738_915_235.jpg"; 
+
+        const LYRICS_SUMMER_SECONDS = [
+            [32.0, "I've been here before", "我来过这儿"],
+            [37.0, "Same summer air filled up my lung once more", "一样的夏日空气又充斥我的肺"],
+            [45.0, "So hard to breathe", "难以呼吸"],
+            [51.0, "Trapped in these mirrored doors", "困在无数镜像的门之中"],
+            [58.0, "Tell me how to tie", "告诉我如何"],
+            [64.0, "These fragments of time with the thread in my hand", "用手里这根线连结时间碎片"],
+            [71.0, "The clouds roll in", "云层翻涌"],
+            [75.0, "Blocking my view", "挡住我的视野"],
+            [79.0, "I have to stand on my tiptoe to see it through", "我不得不踮起脚才能看穿"], 
+            [88.0, "If I could cut up the endless loop", "如果我能打破这无尽的循环"],
+            [95.0, "I'll take the amber's glow once trapped my hope", "我会用这个曾经困住希望的琥珀之光"],
+            [102.0, "To light up my new road", "照亮新的路"],
+            [106.0, "Stay with me", "留在我身边"],
+            [111.0, "Like how we used to be", "像往常一样"],
+            [116.0, "Until we find a world", "我们会找到一个"],
+            [119.0, "Where goodbyes are no more", "没有再见的地方"],
+            [145.0, "When you're by my side", "当你和我并肩"],
+            [150.0, "The stars align to form a line of signs", "星星也连成一道指引方向的线"],
+            [159.0, "As the whole world was crumbling down", "当世界崩塌"],
+            [165.0, "We drew stardust into our arms", "我们把星尘揽进怀中"],
+            [169.0, "It still shines bright", "它依然闪耀着"],
+            [176.0, "If I could cut up the endless loop", "如果我能打破这无尽的循环"],
+            [184.0, "I'll take the amber's glow once trapped my hope", "我会用这个曾经困住希望的琥珀之光"],
+            [191.0, "To light up my new road", "照亮新的路"], 
+            [194.0, "Stay with me", "留在我身边"],
+            [197.0, "Like how we used to be", "像往常一样"],
+            [203.0, "Until we find a world", "我们会找到一个"],
+            [206.0, "Where goodbyes are no more", "没有再见的地方"],
+            [206.5, "No matter how far you may rove (no matter)", "“无论你漂泊多远（无论多远）"], 
+            [213.0, "This thread will lead you through it all (through it all)", "这根线会引你穿过一切（穿过一切）"],
+            [219.0, "But when the road feels far too long (far too long)", "但当你感觉道路过于漫长时（过于漫长）"],
+            [226.0, "Just know that we'll leave the light on (just for you)", "只需记得我们永远为你留着一盏灯”（只为你）"],
+            [234.0, "It's alright", "没关系的"],
+            [234.5, "Our thread will always stay", "那条线会永远陪伴你"],
+            [237.0, "Let tears stream down your face", "让眼泪冲刷掉你的痛苦吧"],
+            [240.0, "Wash clean your pain", "冲刷掉你的痛苦吧"],
+            [242.0, "You've come a long way", "你已经走了很远的路"],
+            [245.0, "Look over there", "看那边"],
+            [247.0, "Beyond the borderline", "在境界线上"],
+            [250.0, "A thousand lanterns shine", "万家灯火亮起"],
+            [257.0, "They will guide you back home", "它们会带你回家"],
+            [264.0, "Until we find a world", "直到我们找到一座新的世界"],
+            [271.0, "Stay with me", "留在我身边"],
+            [274.0, "Like how we used to be", "像往常一样"],
+            [277.0, "Until we find a world", "我们会找到一个"],
+            [299.0, "Where goodbyes are no more", "没有再见的地方"]
+        ];
+
+        const RAW_TEXT_PART_1 = [
+            "悦悦，情人节快乐。", "今天是我们在一起的第34天。", "你之前说，在一起满一个月对你来说是个难题，", "但我们却跨越得轻松出奇。", "没有流于形式的日常报备，", "是每一次都直击灵魂底层的深度交流。", "这种交流的高密度和高质量，", "让我觉得我们似乎已经相爱了很久。", "你把你几乎所有的过去都铺开在我面前，", "我知道，那既是坦诚，也是一种试探——", "你在我这个黑盒面前感到害怕，", "因为你从未遇见过我这样的人，", "你想交出底牌，让我觉得你与众不同，", "却又担心我读完那些沉重的过去后会选择离场。", "但我想告诉你：我全部理解，也全部接受。", "看着你的过去，我只觉得心酸，", "又感到一种无法穿越时空的无奈。", "我常想，为什么没有早点遇见你？", "但理智告诉我，也许只有现在才是最好的时机。", "以前的我，未必能接得住这份爱。", "但现在的我，不仅能接住你所有的情绪，", "甚至能以此为基点，", "预判并照顾到你未曾说出口的感受。", "面对未知的未来，我不希望你独自恐惧。", "我希望我们拥有共同抵抗熵增的勇气。", "我会创造机会，去把那些不确定的“未知”，", "一步步构建成我们手中确定的“现实”；", "去用余生的开心，覆盖你过去所有的难过。", "关于那笔转账，", "如果说没有触动那是假的。", "我的第一反应不是惊喜，而是震惊。", "这不仅仅是一串数字，", "我知道这几乎是你所有的积蓄。", "你把它转给我，", "等同于把你生活的底气、毫不设防地全部交到了我手上。", "这种信任的量级，太沉重，也太珍贵。", "我下意识地用逻辑去分析你的动机，", "我问你是想让我管钱吗？", "你却回得那么轻松自然：", "“不是啊，反正我要用钱的时候，找你要就行。”", "听完这句话，我沉默了许久。", "你的逻辑简单粗暴，听起来轻描淡写，", "却也是最高级的爱——", "你是在告诉我，你愿意把你的生活主导权共享给我，", "你愿意在这个世界上做一个完全依赖我的小孩。", "但正如你所了解的那个我——我绝不会消耗你的信任。", "这笔钱我不会收进自己的口袋，", "因为我是什么样的人，你清楚。", "我的自尊、原则，以及我对你的爱，", "决定了我只会为你创造更多，而不是索取你现有的。", "你的就是我的，我的就是你的，我们之间不需要防火墙。"
+        ];
+        const RAW_TEXT_PART_2 = [
+            "“这首曲子有些耳熟，总觉得好像在哪里听到过。”", "“这是很久以前，你教给我的。”", "“是吗….…可我好像，已经完全不记得了。”", "“我会教给你，就像过去你曾经教给我一样。”", "长久以来，我就像那个漂泊者。", "我的大脑永远处于高强度的过载运行中。", "我习惯了去计算每一步的落点，去布局未来的蓝图，", "去用逻辑对抗生活中的悲鸣与熵增。", "我习惯了做那个撑伞的人，时刻紧绷着神经，", "生怕漏掉一个变量，导致系统崩塌。", "我用那 18080 个字，试图教会你什么是成长，", "什么是面对过去的勇气，", "就像漂泊者曾经教给守岸人的一样。", "我以为我是那个引导者，是那个永远冷静的输出端。", "直到你说出“有我在，你可以不用那么累”的那一刻。", "你用你毫无保留的信任，构筑了一片只属于我的黑海岸。", "你站在那里，对那个满身疲惫、时刻准备战斗的我说：", "“歇一歇吧。你教我不必害怕过去，", "现在换我教你，不必时刻逞强。”", "以前，我只知道如何去“构建”未来；", "是你让我明白了，什么叫做“停泊”现在。", "原来在这个巨大的、充满未知的开放世界里，", "我不再是单打独斗。", "你接过了我所有的逻辑，", "却反手教给了我一样我已经遗忘很久的东西——“依赖”。", "我也终于找到了属于我的守岸人，", "从此以后，我不再漂泊。"
+        ];
+
+        function distributeTimeline(textArray, startOffset, totalDuration, isPhase2 = false) {
+            const count = textArray.length;
+            const GAP = 2.5; 
+            const availableTime = totalDuration - (count * GAP); 
+            const perItemReadTime = availableTime / count; 
+
+            return textArray.map((text, index) => {
+                let textColor = isPhase2 ? (index % 2 === 0 ? "#ffffff" : "#cbd5e1") : (index % 2 === 0 ? "#5d4e4e" : "#888888");
+                return {
+                    text: text,
+                    start: startOffset + (index * (perItemReadTime + GAP)),
+                    duration: perItemReadTime, 
+                    size: isMobile ? 25 : 35, // [硬性修正] Mobile 25px, PC 35px
+                    color: textColor,
+                    bold: false
+                };
+            });
+        }
+
+        const DATA_PHASE_1 = distributeTimeline(RAW_TEXT_PART_1, 2.0, TIME_PHASE_1, false); 
+        const DATA_PHASE_2 = distributeTimeline(RAW_TEXT_PART_2, TIME_PHASE_1 + 2.0, TIME_PHASE_2, true); 
+        
+        let TEXT_DATA = [...DATA_PHASE_1, ...DATA_PHASE_2];
+
+        TEXT_DATA.forEach(item => {
+            if (item.text.includes("转账")) { item.color = "#d41c3e"; item.bold = true; item.size += 4; }
+            if (item.text.includes("不需要防火墙")) { item.color = "#ff8fa3"; item.bold = true; }
+            if (item.text.includes("这首曲子有些耳熟")) { item.color = "#60a5fa"; item.style = "quote"; } 
+            if (item.text.includes("黑海岸")) { item.color = "#60a5fa"; item.bold = true; }
+            if (item.text.includes("守岸人")) { item.color = "#f472b6"; item.bold = true; item.size += 4; }
+            if (item.text.includes("毫不设防地全部交到了我手上")) { item.annotation = "(注意歌词)"; }
+        });
+
+        const FULL_LETTER_HTML = RAW_TEXT_PART_1.join("<br>") + "<br><br>" + RAW_TEXT_PART_2.join("<br>");
+
+        let state = { 
+            isPlaying: false, startTime: 0, musicSwitched: false, envelopeShown: false,
+            waitingForPassword: false, passwordVerified: false, pauseTime: 0 
+        };
+
+        const audioSummer = document.getElementById('bgm-summer');
+        const audioStar = document.getElementById('bgm-star');
+        let canvas, ctx;
+        let petals = [];
+        let hearts = []; 
+        let currentLyricIndex = -1;
+
+        function startJourney() {
+            const overlay = document.getElementById('start-overlay');
+            overlay.style.opacity = 0;
+            setTimeout(() => { overlay.style.display = 'none'; }, 800);
+            
+            audioSummer.volume = 0;
+            audioSummer.play().then(() => {
+                fadeInAudio(audioSummer, 0.6);
+            }).catch(e => console.log("Audio Autoplay blocked", e));
+
+            audioStar.load(); 
+            document.getElementById('music-widget').classList.add('show');
+            document.getElementById('music-cover').style.backgroundImage = `url('${COVER_IMG_1}')`;
+
+            state.isPlaying = true;
+            state.startTime = performance.now();
+            requestAnimationFrame(animate);
+        }
+        
+        document.getElementById('start-overlay').addEventListener('click', startJourney);
+        document.getElementById('start-overlay').addEventListener('touchstart', startJourney, {passive: true});
+
+        document.getElementById('pwd-input').addEventListener('input', (e) => {
+            if (e.target.value === PASSWORD) { unlockPhase2(); }
+        });
+
+        function unlockPhase2() {
+            if (state.passwordVerified) return;
+            state.passwordVerified = true;
+            state.waitingForPassword = false;
+            
+            const widget = document.getElementById('password-widget');
+            widget.style.opacity = 0;
+            widget.style.transform = "translateX(-50%) scale(0.9)";
+            setTimeout(() => { widget.classList.remove('show'); }, 500);
+
+            const pauseDuration = performance.now() - state.pauseTime;
+            state.startTime += pauseDuration; 
+        }
+
+        function fadeInAudio(audio, targetVol) {
+            let vol = 0;
+            const interval = setInterval(() => { vol += 0.05; if (vol >= targetVol) { vol = targetVol; clearInterval(interval); } audio.volume = vol; }, 100);
+        }
+
+        function fadeOutAudio(audio) {
+            let vol = audio.volume;
+            const interval = setInterval(() => { vol -= 0.05; if (vol <= 0) { vol = 0; audio.pause(); clearInterval(interval); } audio.volume = vol; }, 100);
+        }
+
+        function checkMusicSwitch(currentTime) {
+            if (!state.musicSwitched && currentTime >= TIME_PHASE_1) {
+                if (!state.passwordVerified) {
+                    if (!state.waitingForPassword) {
+                        state.waitingForPassword = true;
+                        state.pauseTime = performance.now(); 
+                        audioSummer.pause();
+                        document.getElementById('password-widget').classList.add('show');
+                    }
+                    return; 
+                }
+
+                state.musicSwitched = true;
+                fadeOutAudio(audioSummer);
+                audioStar.volume = 0;
+                audioStar.play().catch(e => console.log("Second audio play failed", e));
+                fadeInAudio(audioStar, 0.8);
+
+                document.body.classList.add('dark-theme');
+                document.documentElement.style.setProperty('--bg-color', '#0f172a');
+                document.getElementById('bg-layer').style.opacity = 0;
+                document.getElementById('bg-layer-night').style.opacity = 1;
+                document.getElementById('music-header-box').classList.add('dark-mode');
+
+                document.getElementById('song-title').style.opacity = 0;
+                document.getElementById('song-artist').style.opacity = 0;
+                document.getElementById('lyrics-display').innerHTML = "<div class='lyric-eng'></div><div class='lyric-chn'></div>";
+
+                setTimeout(() => {
+                    document.getElementById('song-title').innerText = "繁星、新生，与你";
+                    document.getElementById('song-artist').innerText = "YUE / STEVEN_H";
+                    document.getElementById('music-cover').style.backgroundImage = `url('${COVER_IMG_2}')`;
+                    document.getElementById('song-title').style.opacity = 1;
+                    document.getElementById('song-artist').style.opacity = 1;
+                }, 500);
+            }
+        }
+
+        function updateLyrics(currentTime) {
+            if (state.musicSwitched || state.waitingForPassword) return; 
+
+            if (currentTime < 32.0) {
+                if (currentLyricIndex !== -10) { 
+                    currentLyricIndex = -10;
+                    document.getElementById('lyrics-display').innerHTML = "<div class='lyric-eng'>Instrumental</div><div class='lyric-chn'>奏乐中...</div>";
+                }
+                return;
+            }
+
+            if (currentTime > 120.0 && currentTime < 144.0) {
+                if (currentLyricIndex !== -20) {
+                    currentLyricIndex = -20;
+                    const container = document.getElementById('lyrics-display');
+                    container.classList.add('fade-change');
+                    setTimeout(() => {
+                         container.innerHTML = "<div class='lyric-eng'>Instrumental</div><div class='lyric-chn'>...</div>";
+                         container.classList.remove('fade-change');
+                    }, 500);
+                }
+                return;
+            }
+
+            let activeIndex = -1;
+            for (let i = LYRICS_SUMMER_SECONDS.length - 1; i >= 0; i--) {
+                if (currentTime >= LYRICS_SUMMER_SECONDS[i][0]) {
+                    activeIndex = i;
+                    break;
+                }
+            }
+
+            if (activeIndex !== -1 && activeIndex !== currentLyricIndex) {
+                currentLyricIndex = activeIndex;
+                const eng = LYRICS_SUMMER_SECONDS[activeIndex][1];
+                const chn = LYRICS_SUMMER_SECONDS[activeIndex][2];
+                const container = document.getElementById('lyrics-display');
+                container.classList.add('fade-change');
+                setTimeout(() => {
+                    container.innerHTML = `<div class='lyric-eng'>${eng}</div><div class='lyric-chn'>${chn}</div>`;
+                    container.classList.remove('fade-change');
+                }, 500);
+            }
+        }
+
+        class Petal {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * -canvas.height;
+                this.size = Math.random() * 15 + 5;
+                this.speedY = Math.random() * 1 + 0.5;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.rotation = Math.random() * 360;
+                this.rotSpeed = Math.random() * 2 - 1;
+                this.opacity = 1;
+                this.color = `rgba(255, ${Math.floor(Math.random()*50 + 180)}, ${Math.floor(Math.random()*50 + 180)}, ${Math.random()*0.4 + 0.2})`;
+            }
+            update() {
+                if (state.musicSwitched) { this.opacity -= 0.005; }
+                this.y += this.speedY;
+                this.x += this.speedX + Math.sin(this.y * 0.01) * 0.5;
+                this.rotation += this.rotSpeed;
+                if (this.y > canvas.height) this.y = -20;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+            }
+            draw() {
+                if (this.opacity <= 0) return;
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.globalAlpha = this.opacity; ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.ellipse(0, 0, this.size, this.size/2, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Heart {
+            constructor(x, y) { this.x = x; this.y = y; this.size = 10; this.alpha = 1; this.speedY = -1.5; }
+            update() { this.y += this.speedY; this.alpha -= 0.015; }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = "#ff6b81";
+                ctx.translate(this.x, this.y); ctx.beginPath();
+                ctx.moveTo(0, 0); ctx.bezierCurveTo(-5, -5, -10, 0, 0, 10); ctx.bezierCurveTo(10, 0, 5, -5, 0, 0); ctx.fill(); ctx.restore();
+            }
+        }
+
+        function init() {
+            canvas = document.getElementById('canvas-layer');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            for(let i=0; i<60; i++) petals.push(new Petal());
+            createSubtitleElements();
+            document.getElementById('letter-content').innerHTML = FULL_LETTER_HTML;
+            window.addEventListener('click', (e) => { if (state.isPlaying) createHearts(e.clientX, e.clientY); });
+            window.addEventListener('touchstart', (e) => { if (state.isPlaying) createHearts(e.touches[0].clientX, e.touches[0].clientY); });
+        }
+
+        function createHearts(x, y) { for(let i=0; i<3; i++) { hearts.push(new Heart(x + (Math.random()-0.5)*20, y + (Math.random()-0.5)*20)); } }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+        function createSubtitleElements() {
+            const container = document.getElementById('subtitle-container');
+            const scale = 1.0; 
+            TEXT_DATA.forEach(data => {
+                const el = document.createElement('div');
+                el.className = 'cinematic-line';
+                if (data.annotation) {
+                    el.innerHTML = `${data.text}<div class='line-annotation'>${data.annotation}</div>`;
+                } else {
+                    el.innerText = data.text;
+                }
+                
+                el.style.fontSize = `${data.size * scale}px`;
+                if (data.color) el.style.color = data.color;
+                if (data.bold) el.style.fontWeight = 'bold';
+                if (data.style === 'quote') el.classList.add('quote-style');
+                data.dom = el; container.appendChild(el);
+            });
+        }
+
+        function animate() {
+            if (!state.isPlaying) return;
+            
+            let currentTime;
+            if (state.waitingForPassword) {
+                currentTime = TIME_PHASE_1; 
+            } else {
+                currentTime = (performance.now() - state.startTime) / 1000;
+            }
+            
+            const totalDuration = TIME_PHASE_1 + TIME_PHASE_2;
+            
+            checkMusicSwitch(currentTime);
+            updateLyrics(currentTime);
+            
+            if (currentTime > totalDuration && !state.envelopeShown) {
+                state.envelopeShown = true;
+                document.getElementById('letter-btn').classList.add('show');
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            petals.forEach(p => { p.update(); p.draw(); });
+            for (let i = hearts.length - 1; i >= 0; i--) {
+                hearts[i].update(); hearts[i].draw();
+                if (hearts[i].alpha <= 0) hearts.splice(i, 1);
+            }
+
+            TEXT_DATA.forEach(item => {
+                const start = item.start;
+                const end = item.start + item.duration;
+                
+                if (currentTime >= start && currentTime < end) {
+                    if (!item.dom.classList.contains('line-active')) {
+                        item.dom.classList.add('line-active');
+                        item.dom.classList.remove('line-exit');
+                    }
+                } else if (currentTime >= end) {
+                    if (item.dom.classList.contains('line-active')) {
+                        item.dom.classList.remove('line-active');
+                        item.dom.classList.add('line-exit');
+                    }
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+
+        function showFullText() { document.getElementById('full-text-modal').classList.add('show'); }
+        function hideFullText() { document.getElementById('full-text-modal').classList.remove('show'); }
+    </script>
+</body>
+</html>
